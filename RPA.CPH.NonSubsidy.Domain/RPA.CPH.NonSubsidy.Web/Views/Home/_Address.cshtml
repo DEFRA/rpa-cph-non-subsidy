@@ -1,0 +1,60 @@
+﻿@model RPA.CPH.NonSubsidy.Domain.Classes.CPH.Address
+
+<h3>Address Details</h3>
+
+<div class="float-left clear-both data-group">
+    <div class="data-title">
+        @Html.DisplayNameFor(model => model.Address1)
+    </div>
+    <div>
+        @Html.TextBoxFor(model => model.Address1, new { @class = "highlight input-long tracked" })
+    </div>
+</div>
+
+<div class="float-left clear-both data-group">
+    <div class="data-title">
+        @Html.DisplayNameFor(model => model.Address2)
+    </div>
+    <div>
+        @Html.TextBoxFor(model => model.Address2, new { @class = "highlight input-long tracked" })
+    </div>
+</div>
+
+<div class="float-left clear-both data-group">
+    <div class="data-title">
+        @Html.DisplayNameFor(model => model.Address3)
+    </div>
+    <div>
+        @Html.TextBoxFor(model => model.Address3, new { @class = "highlight input-long tracked" })
+    </div>
+</div>
+
+<div class="float-left clear-both data-group">
+    <div class="data-title">
+        @Html.DisplayNameFor(model => model.Address4)
+    </div>
+    <div>
+        @Html.TextBoxFor(model => model.Address4, new { @class = "highlight input-long tracked" })
+    </div>
+</div>
+
+<div class="float-left clear-both data-group">
+    <div class="data-title">
+        @Html.DisplayNameFor(model => model.Address5)
+    </div>
+    <div>
+        @Html.TextBoxFor(model => model.Address5, new { @class = "highlight input-long tracked" })
+    </div>
+</div>
+
+<div class="float-left clear-both data-group">
+    <div class="data-title">
+        @Html.DisplayNameFor(model => model.PostCode)
+    </div>
+    <div>
+        @Html.TextBoxFor(model => model.PostCode, new { @class = "highlight tracked" })
+    </div>
+</div>
+
+@Html.HiddenFor(model=>model.CustomerId)
+@Html.HiddenFor(model=>model.AddressId)

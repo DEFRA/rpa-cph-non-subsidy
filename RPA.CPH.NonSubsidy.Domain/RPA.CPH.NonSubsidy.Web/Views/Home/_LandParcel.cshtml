@@ -1,0 +1,40 @@
+﻿@model RPA.CPH.NonSubsidy.Domain.Classes.CPH.LandParcel
+
+@using (Html.BeginCollectionItem("LandParcels"))
+{
+    <div class="float-left clear-both data-group">
+        <div class="data-title">
+            @Html.DisplayNameFor(model => model.GridReference)
+        </div>
+        <div>
+            @Html.TextBoxFor(model => model.GridReference, new { @class = "highlight input tracked" })
+        </div>
+    </div>
+
+    <div class="float-left clear-none data-group">
+        <div class="data-title">
+            @Html.DisplayNameFor(model => model.PlaceOfBusiness)
+        </div>
+        <div>
+            @Html.CheckBoxFor(model => model.PlaceOfBusiness, new { @class = "tracked" })
+
+            <a class="delete-landParcel" data-id="@Model.LandParcelId" style="margin-left:20px;" href="JavaScript:void(0)">Delete</a>
+        </div>
+    </div>
+
+    @Html.HiddenFor(model => model.LandId)
+    @Html.HiddenFor(model => model.LandParcelId)
+    @Html.HiddenFor(model => model.Active, new { @class="activeFlag", @id = string.Format("{0}Active", Model.LandParcelId) })
+}
+
+<script>
+    $(function () {
+        $('.activeFlag').each(function(){
+            
+            if($(this).val().toUpperCase() == "FALSE")
+            {
+                $(this).parent().hide();
+            }
+        });
+    });
+</script>

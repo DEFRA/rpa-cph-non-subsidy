@@ -1,0 +1,18 @@
+﻿@model System.Web.Mvc.HandleErrorInfo
+
+@{
+    ViewBag.Title = "Error";
+}
+
+<h2>Application Error</h2>
+<h3>An error occurred and the requested process could not be completed.</h3>
+
+@if (Model != null)
+{
+    <p>
+        <b>Error Details:</b> @Model.Exception.Message<br />
+    </p>
+}
+
+<p>For application support, please contact the Service Desk</p>
+

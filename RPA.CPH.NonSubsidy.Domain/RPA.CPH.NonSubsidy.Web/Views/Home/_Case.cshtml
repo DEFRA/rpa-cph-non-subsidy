@@ -1,0 +1,14 @@
+﻿@model RPA.CPH.NonSubsidy.Domain.Classes.CPH.Case
+
+<h3>CRM Case Details</h3>
+
+<div class="float-left clear-both data-group">
+    <div class="data-title">
+        @Html.DisplayNameFor(model => model.CRMCaseReferenceNumber)
+    </div>
+    <div>
+        @Html.TextBoxFor(model => model.CRMCaseReferenceNumber, new { @class = "highlight input-long tracked" })
+    </div>
+</div>
+
+@Html.HiddenFor(model=>model.CustomerId)

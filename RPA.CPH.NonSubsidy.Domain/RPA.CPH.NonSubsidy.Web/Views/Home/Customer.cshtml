@@ -1,0 +1,97 @@
+﻿@model RPA.CPH.NonSubsidy.Domain.Classes.CPH.Customer
+
+@{
+    ViewBag.Title = "Customer Details";
+}
+
+<h2>Customer Details</h2>
+
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+
+    <div class="float-left clear-none data-group">
+        <h3>Business Details</h3>
+
+        <div class="float-left clear-both data-group">
+            <div class="data-title">
+                @Html.DisplayNameFor(model => model.SBI)
+            </div>
+            <div>
+                @Html.TextBoxFor(model => model.SBI, new { @class = "highlight input tracked", @Value = (Model.SBI > 0 ? Model.SBI.ToString() : "") })
+            </div>
+        </div>
+        <div class="float-left clear-both data-group">
+            <div class="data-title">
+                @Html.DisplayNameFor(model => model.BusinessName)
+            </div>
+            <div>
+                @Html.TextBoxFor(model => model.BusinessName, new { @class = "highlight input-long tracked" })
+            </div>
+        </div>
+
+        <div class="float-left clear-both">
+            @Html.Partial("_Case", Model.Case)
+        </div>
+
+    </div>
+
+    <div class="float-left clear-none data-group">
+        @Html.Partial("_Address", Model.Addresses.FirstOrDefault())
+    </div>
+
+    <div class="float-left clear-none data-group">
+        @Html.Partial("_Land", Model.Land.FirstOrDefault())
+    </div>
+
+    <div class="float-right clear-both">
+        <button class="float-right clear-both" name="submit" value="save">Save Customer Details</button>
+        <button class="float-right clear-both" id="deleteCustomer" name="submit" value="delete">Delete Customer Record</button>
+        @Html.ActionLink("Back to Customer list", "Index", null, new { @id = "backList", @class = "float-right clear-both", @style = "margin-right:15px;" })
+    </div>
+
+    <div class="float-right clear-both data-group">
+        @Html.Partial("_Audit", Model.Audit)
+    </div>
+
+    <div class="float-left clear-both">
+        @Html.ValidationSummary(false, "", new { @class = "text-danger" })
+    </div>
+
+    @Html.Hidden("IsUpdate")
+    @Html.HiddenFor(model=>model.CustomerId)
+}
+
+@Html.Hidden("Changes", false)
+
+@section Scripts {
+    @Scripts.Render("~/bundles/jqueryval")
+}
+
+<script>
+    
+    $('.tracked').on('change', function (e) {
+        
+        $('#Changes').val(true);
+    });
+
+    $('#backList').click(function (e) {
+        
+        var changes = $('#Changes').val();
+        
+        if(changes.toUpperCase() == "TRUE")
+        {
+            var c = confirm("You have made unsaved changes, ignore changes?")
+
+            return c;
+        }
+    });
+
+    $('#deleteCustomer').click(function (e) {        
+        var c = confirm("Are you sure you want to delete this customer record?")
+
+        return c;
+    });
+    
+</script>

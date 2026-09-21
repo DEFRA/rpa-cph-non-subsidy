@@ -1,0 +1,85 @@
+﻿@model PagedList<RPA.CPH.NonSubsidy.Domain.Classes.CPH.Customer>
+
+@{
+    ViewBag.Title = "CPH Non Subsidy";
+}
+
+@using PagedList.Mvc;
+@using PagedList;
+
+<h2>CPH Non Subsidy Cases</h2>
+
+<div class="float-left clear-left">
+
+    @using (Html.BeginForm("Index", "Home", FormMethod.Get))
+    {
+
+        <div class="float-left">
+            <input type="text" name="searchString" id="searchString" />
+        </div>
+        <div class="float-left" style="margin-left:10px">
+            <button class="button" style="position:static;" id="searchButton">Search</button>
+            <button style="position:static;" id="resetButton" onclick="location.href='@Url.Action("Index", new { searchString = string.Empty })'">Reset</button>
+        </div>
+    }
+
+</div>
+
+<div class="float-right clear-none">
+    <div class="clear-both float-right">
+        <button class="button" style="position:static;" onclick="location.href='@Url.Action("Customer")'">New Customer</button>
+    </div>
+    <div class="clear-both float-right">
+        @Html.ActionLink("Download Customer Data", "Extract")        
+    </div>
+</div>
+
+@if (Model.Count > 0)
+{
+    <div class="float-left clear-both">
+    <table class="table">
+        <tr>
+            <th>@Html.DisplayNameFor(model => model[0].SBI)</th>
+            <th>@Html.DisplayNameFor(model => model[0].Land.FirstOrDefault().CPH)</th>
+            <th>@Html.DisplayNameFor(model => model[0].Addresses.FirstOrDefault().FullAddress)</th>
+            <th>@Html.DisplayNameFor(model => model[0].Land.FirstOrDefault().LandParcelDetails)</th>
+            <th>@Html.DisplayNameFor(model => model[0].Case.CRMCaseReferenceNumber)</th>
+            <th></th>
+        </tr>
+
+        @foreach (var customer in Model)
+        {
+            <tr>
+                <td>@Html.DisplayFor(customerItem => customer.SBI)</td>
+                <td>@Html.DisplayFor(customerItem => customer.Land.FirstOrDefault().CPH)</td>
+                <td style="width:400px;">@Html.DisplayFor(customerItem => customer.Addresses.FirstOrDefault().FullAddress)</td>
+                <td style="width:300px;">@Html.DisplayFor(customerItem => customer.Land.FirstOrDefault().LandParcelDetails)</td>
+                <td>@Html.DisplayFor(customerItem => customer.Case.CRMCaseReferenceNumber)</td>
+                <td>@Html.ActionLink("Update", "Customer", new { customerId = customer.CustomerId })</td>
+            </tr>
+        }
+
+    </table>
+        </div>
+
+    <div class="float-left clear-left">
+        @Html.PagedListPager(Model, page => Url.Action("Index", new { ViewBag.SearchString, page, pageSize = Model.PageSize }))
+        Showing @(Model.TotalItemCount < Model.FirstItemOnPage ? 0 : Model.FirstItemOnPage) to @Model.LastItemOnPage of @Model.TotalItemCount customers
+    </div>
+}
+else
+{
+    <div class="info-box float-left clear-both" style="margin-left:20px; margin-bottom:10px; margin-top:10px;">
+        <div class="infolabel">
+            <p>No customer data has been created.</p>
+        </div>
+    </div>
+}
+
+<script>
+
+    $('#resetButton').click(function (e) {
+        e.preventDefault();
+    });
+
+</script>

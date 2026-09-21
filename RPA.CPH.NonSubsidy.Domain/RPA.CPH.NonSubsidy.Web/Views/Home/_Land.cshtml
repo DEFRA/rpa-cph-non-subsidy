@@ -1,0 +1,79 @@
+﻿@model RPA.CPH.NonSubsidy.Domain.Classes.CPH.Land
+
+<h3>Land Details</h3>
+
+<div class="float-left clear-both data-group">
+    <div class="data-title">
+        @Html.DisplayNameFor(model => model.CPH)
+    </div>
+    <div>
+        @Html.TextBoxFor(model => model.County, new { @class = "highlight number-input tracked", @Value = (Model.County > 0 ? Model.County.ToString().PadLeft(2, '0') : "") }) <span style="margin-left: 5px; margin-right: 5px;">/</span>
+        @Html.TextBoxFor(model => model.Parish, new { @class = "highlight number-input tracked", @Value = (Model.Parish > 0 ? Model.Parish.ToString().PadLeft(3, '0') : "") }) <span style="margin-left: 5px; margin-right: 5px;">/</span>
+        @Html.TextBoxFor(model => model.Holding, new { @class = "highlight number-input tracked", @Value = (Model.Holding > 0 ? Model.Holding.ToString().PadLeft(4, '0') : "") })
+    </div>
+</div>
+
+<div class="float-left clear-both">
+    <h3>Land Parcels</h3>
+
+    <div class="float-left">
+        <a href="javascript:void(0)" id="Add-Parcel">Add Land Parcel</a>
+    </div>
+
+    <div id="landParcelsList" class="float-left clear-both margin-top">
+        @foreach (var landParcel in Model.LandParcels)
+        {
+            <div class="float-left clear-both">
+                @{Html.RenderPartial("_LandParcel", landParcel);}
+            </div>
+        }
+    </div>
+
+    <div class="info-box float-left clear-both" id="NoLandParcels" style="margin-left:20px; margin-bottom:10px; margin-top:10px; visibility:hidden">
+        <div class="infolabel">
+            <p>No Land Parcel data has been created.</p>
+        </div>
+    </div>
+    
+
+</div>
+
+@Html.HiddenFor(model=>model.LandId)
+@Html.HiddenFor(model=>model.CustomerId)
+
+<script>
+    $(function () {
+        if(@Model.LandParcels.Count == 0)
+        {
+            $('#NoLandParcels').show();
+        }        
+    });
+
+    $('#Add-Parcel').click(function () {
+
+        $('#Changes').val(true);
+
+        var landId = $('#LandId').val();
+
+        $.ajax({
+            url: '@Url.Action("_NewLandParcel")',
+            data: { landId: landId },
+            cache: false,
+            success: function (html) {
+                $("#landParcelsList").append(html);
+                $("#NoLandParcels").hide();
+            }
+        });
+    });
+
+    $('.delete-landParcel').click(function () {
+
+        $('#Changes').val(true);
+
+        var id = $(this).data("id");
+
+        $('#' + id + 'Active').val(false);
+
+        $(this).parent().parent().parent().hide();
+    });
+</script>

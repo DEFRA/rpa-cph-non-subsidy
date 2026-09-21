@@ -1,0 +1,74 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=11" />
+    <meta charset="utf-8" />
+    <title>CPH Non Subsidy Database</title>
+    <link href="~/images/Icon.ico" rel="shortcut icon" type="image/x-icon" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+    @Scripts.Render("~/bundles/modernizr")
+    @Scripts.Render("~/bundles/jquery")
+    @Scripts.Render("~/bundles/jqueryval")
+    @Scripts.Render("~/bundles/bootstrap")
+    @Scripts.Render("~/bundles/jqueryui")
+    @Styles.Render("~/Content/bootstrap")
+    @Styles.Render("~/govuk/css")
+    @Styles.Render("~/Content/jqueryui/blitzer")
+    @Styles.Render("~/Content/css")
+    @RenderSection("scripts", required: false)
+</head>
+<body>
+    <div class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <div class="navbar-icon">
+                    <img alt="" src="~/images/Icon_inverted-6.png" />
+                </div>
+                @Html.ActionLink("CPH Non Subsidy Database", "Index", "Home", new { area = "" }, new { @class = "navbar-brand" })
+            </div>
+            <div class="navbar-collapse collapse">
+                <ul class="nav navbar-nav"></ul>
+            </div>
+        </div>
+        <div class="headerbar"></div>
+    </div>
+    <div class="container body-content">
+        @RenderBody()
+    </div>
+    <footer>
+        <h4>DEFRA Development Team</h4>
+        <div class="float-left container third">
+            <h4>Application Support</h4>
+            <hr />
+            <p>For application support, please contact the Service Desk</p>
+            <address>
+                <strong>Email:</strong> <a href="mailto:ServiceDesk@rpa.gsi.gov.uk?Subject=Application Incident" target="_top">ServiceDesk@rpa.gsi.gov.uk</a><br />
+                <strong>Telephone:</strong> <a href="tel:03300416999">03300 416 999</a><br />
+            </address>
+        </div>
+        <div class="float-left container third">
+            <h4>Application Development</h4>
+            <hr />
+            <p>For application development please follow the DEFRA Change Management Request for Change process</p>
+            <address>
+                <strong>Guidance:</strong> <a href="http://rpa-guidancehub/it/servicemanagement/Documents/Forms/AllItems.aspx?RootFolder=%2Fit%2Fservicemanagement%2FDocuments%2FService%20Support%2FChange%2C%20Configuration%20and%20Release%20Management%2FSupporting%20Documents&FolderCTID=0x012000853EA473A8B51844818EA0D404C0601A&View={4877E188-4B12-4CF3-8CFB-481E7B5751FD}">Change Management Policy</a><br />
+            </address>
+        </div>
+        <hr />
+    </footer>
+
+    <script>
+        $.ajaxSetup({
+            cache: false
+        });
+    </script>
+
+</body>
+
+</html>

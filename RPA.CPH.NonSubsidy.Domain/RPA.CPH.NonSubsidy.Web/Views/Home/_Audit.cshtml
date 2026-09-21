@@ -1,0 +1,10 @@
+﻿@model RPA.CPH.NonSubsidy.Domain.Classes.Audit.Audit
+
+@if (ViewBag.IsUpdate)
+{
+     <p class="grey font-small">@Html.DisplayFor(model => model.LastUpdatedDetails)</p>
+}
+
+@Html.HiddenFor(model=>model.CustomerId)
+@Html.HiddenFor(model => model.LastUpdated)
+@Html.HiddenFor(model => model.LastUpdatedBy)
