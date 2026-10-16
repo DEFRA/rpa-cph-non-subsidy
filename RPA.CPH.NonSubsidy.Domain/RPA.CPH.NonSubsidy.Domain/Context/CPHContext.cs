@@ -1,4 +1,4 @@
-﻿using RPA.CPH.NonSubsidy.Domain.Classes.Audit;
+using RPA.CPH.NonSubsidy.Domain.Classes.Audit;
 using RPA.CPH.NonSubsidy.Domain.Classes.CPH;
 using System;
 using System.Collections.Generic;
@@ -9,8 +9,18 @@ using System.Threading.Tasks;
 
 namespace RPA.CPH.NonSubsidy.Domain.Context
 {
+    [DbConfigurationType(typeof(CPHDbConfiguration))]
     public class CPHContext : DbContext
     {
+        // Required by DbMigrator, which creates the context itself; the migration configuration supplies the real connection.
+        public CPHContext() : base("CPHContext")
+        {
+        }
+
+        public CPHContext(string nameOrConnectionString) : base(nameOrConnectionString)
+        {
+        }
+
         public DbSet<Customer> Customers { get; set; }
 
         public DbSet<Address> Addresses { get; set; }
@@ -37,3 +47,5 @@ namespace RPA.CPH.NonSubsidy.Domain.Context
         }
     }
 }
+
+

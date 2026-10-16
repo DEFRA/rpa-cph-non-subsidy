@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta http-equiv="X-UA-Compatible" content="IE=11" />
@@ -7,15 +7,17 @@
     <link href="~/images/Icon.ico" rel="shortcut icon" type="image/x-icon" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 
-    @Scripts.Render("~/bundles/modernizr")
-    @Scripts.Render("~/bundles/jquery")
-    @Scripts.Render("~/bundles/jqueryval")
-    @Scripts.Render("~/bundles/bootstrap")
-    @Scripts.Render("~/bundles/jqueryui")
-    @Styles.Render("~/Content/bootstrap")
-    @Styles.Render("~/govuk/css")
-    @Styles.Render("~/Content/jqueryui/blitzer")
-    @Styles.Render("~/Content/css")
+    <script src="~/Scripts/modernizr-2.6.2.js"></script>
+    <script src="~/Scripts/jquery-1.10.2.min.js"></script>
+    <script src="~/Scripts/jquery.validate.min.js"></script>
+    <script src="~/Scripts/jquery.validate.unobtrusive.min.js"></script>
+    <script src="~/Scripts/jquery.unobtrusive-ajax.min.js"></script>
+    <script src="~/Scripts/bootstrap.min.js"></script>
+    <script src="~/Scripts/respond.min.js"></script>
+    <script src="~/Scripts/jquery-ui.min-1.11.1.js"></script>
+    <link href="~/Content/bootstrap.min.css" rel="stylesheet" />
+    <link href="~/assets/govuk/stylesheets/fonts.css" rel="stylesheet" />
+    <link href="~/Content/Site.css" rel="stylesheet" />
     @RenderSection("scripts", required: false)
 </head>
 <body>
@@ -30,7 +32,7 @@
                 <div class="navbar-icon">
                     <img alt="" src="~/images/Icon_inverted-6.png" />
                 </div>
-                @Html.ActionLink("CPH Non Subsidy Database", "Index", "Home", new { area = "" }, new { @class = "navbar-brand" })
+                <a asp-controller="Home" asp-action="Index" class="navbar-brand">CPH Non Subsidy Database</a>
             </div>
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav"></ul>

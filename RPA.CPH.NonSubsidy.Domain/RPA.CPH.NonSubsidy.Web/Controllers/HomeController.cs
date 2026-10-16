@@ -1,15 +1,14 @@
-﻿using PagedList;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using X.PagedList;
 using RPA.CPH.NonSubsidy.Domain.Classes.Audit;
 using RPA.CPH.NonSubsidy.Domain.Classes.CPH;
 using RPA.CPH.NonSubsidy.Domain.Interfaces;
-using RPA.CPH.NonSubsidy.Domain.UnitOfWork;
 using RPA.CPH.NonSubsidy.Web.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Web;
-using System.Web.Mvc;
 
 namespace RPA.CPH.NonSubsidy.Web.Controllers
 {
@@ -19,19 +18,13 @@ namespace RPA.CPH.NonSubsidy.Web.Controllers
         IUnitOfWork uow;
         IUser user;
 
-        public HomeController()
-        {
-            this.uow = new UnitOfWork();
-            this.user = new User();
-        }
-
         public HomeController(IUnitOfWork uow, IUser user)
         {
             this.uow = uow;
             this.user = user;
         }
 
-        public ActionResult Index(string searchString = null, int page = 1, int pageSize = 20)
+        public IActionResult Index(string searchString = null, int page = 1, int pageSize = 20)
         {
             List<Customer> customers;
 
@@ -45,12 +38,12 @@ namespace RPA.CPH.NonSubsidy.Web.Controllers
                 ViewBag.SearchString = searchString;
             }
 
-            PagedList<Customer> model = new PagedList<Customer>(customers, page, pageSize);
+            IPagedList<Customer> model = new PagedList<Customer>(customers, page, pageSize);
 
             return View(model);
         }
 
-        public ActionResult Customer(int? customerId = null)
+        public IActionResult Customer(int? customerId = null)
         {
             Customer customer;
 
@@ -70,7 +63,7 @@ namespace RPA.CPH.NonSubsidy.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Customer(Customer customer, Case _case, Address address, Land land, List<LandParcel> LandParcels, Audit audit, bool IsUpdate, string submit)
+        public IActionResult Customer(Customer customer, Case _case, Address address, Land land, List<LandParcel> LandParcels, Audit audit, bool IsUpdate, string submit)
         {
             if(submit == "delete")
             {
@@ -171,7 +164,7 @@ namespace RPA.CPH.NonSubsidy.Web.Controllers
             return PartialView("_LandParcel", landParcel);
         }
 
-        public ActionResult Extract()
+        public IActionResult Extract()
         {
             List<LandParcel> landParcels = uow.LandParcelRepository.FindBy(x => x.Active).OrderBy(x => x.Land.Customer.SBI).ThenBy(x => x.GridReference).ToList();
 

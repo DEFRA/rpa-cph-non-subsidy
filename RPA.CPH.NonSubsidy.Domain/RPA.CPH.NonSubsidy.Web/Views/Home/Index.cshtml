@@ -1,11 +1,11 @@
-﻿@model PagedList<RPA.CPH.NonSubsidy.Domain.Classes.CPH.Customer>
+@model X.PagedList.IPagedList<RPA.CPH.NonSubsidy.Domain.Classes.CPH.Customer>
 
 @{
     ViewBag.Title = "CPH Non Subsidy";
 }
 
-@using PagedList.Mvc;
-@using PagedList;
+@using X.PagedList.Mvc.Core;
+@using X.PagedList;
 
 <h2>CPH Non Subsidy Cases</h2>
 
@@ -40,9 +40,9 @@
     <table class="table">
         <tr>
             <th>@Html.DisplayNameFor(model => model[0].SBI)</th>
-            <th>@Html.DisplayNameFor(model => model[0].Land.FirstOrDefault().CPH)</th>
-            <th>@Html.DisplayNameFor(model => model[0].Addresses.FirstOrDefault().FullAddress)</th>
-            <th>@Html.DisplayNameFor(model => model[0].Land.FirstOrDefault().LandParcelDetails)</th>
+            <th>CPH</th>
+            <th>Address</th>
+            <th>Land Parcels</th>
             <th>@Html.DisplayNameFor(model => model[0].Case.CRMCaseReferenceNumber)</th>
             <th></th>
         </tr>
@@ -50,11 +50,11 @@
         @foreach (var customer in Model)
         {
             <tr>
-                <td>@Html.DisplayFor(customerItem => customer.SBI)</td>
-                <td>@Html.DisplayFor(customerItem => customer.Land.FirstOrDefault().CPH)</td>
-                <td style="width:400px;">@Html.DisplayFor(customerItem => customer.Addresses.FirstOrDefault().FullAddress)</td>
-                <td style="width:300px;">@Html.DisplayFor(customerItem => customer.Land.FirstOrDefault().LandParcelDetails)</td>
-                <td>@Html.DisplayFor(customerItem => customer.Case.CRMCaseReferenceNumber)</td>
+                <td>@customer.SBI</td>
+                <td>@customer.Land.FirstOrDefault()?.CPH</td>
+                <td style="width:400px;">@customer.Addresses.FirstOrDefault()?.FullAddress</td>
+                <td style="width:300px;">@customer.Land.FirstOrDefault()?.LandParcelDetails</td>
+                <td>@customer.Case?.CRMCaseReferenceNumber</td>
                 <td>@Html.ActionLink("Update", "Customer", new { customerId = customer.CustomerId })</td>
             </tr>
         }
@@ -63,7 +63,7 @@
         </div>
 
     <div class="float-left clear-left">
-        @Html.PagedListPager(Model, page => Url.Action("Index", new { ViewBag.SearchString, page, pageSize = Model.PageSize }))
+        @Html.PagedListPager(Model, page => Url.Action("Index", new { SearchString = (string)ViewBag.SearchString, page, pageSize = Model.PageSize }))
         Showing @(Model.TotalItemCount < Model.FirstItemOnPage ? 0 : Model.FirstItemOnPage) to @Model.LastItemOnPage of @Model.TotalItemCount customers
     </div>
 }

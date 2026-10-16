@@ -1,4 +1,4 @@
-﻿using RPA.CPH.NonSubsidy.Domain.Context;
+using RPA.CPH.NonSubsidy.Domain.Context;
 using RPA.CPH.NonSubsidy.Domain.Classes.CPH;
 using RPA.CPH.NonSubsidy.Domain.Repository;
 using System;
@@ -22,11 +22,6 @@ namespace RPA.CPH.NonSubsidy.Domain.UnitOfWork
         private IRepository<Case> caseRepository;
         private IRepository<Audit> auditRepository;
     
-        public UnitOfWork()
-        {
-            this.context = new CPHContext();
-        }
-
         public UnitOfWork(CPHContext context)
         {
             this.context = context;
@@ -135,3 +130,4 @@ namespace RPA.CPH.NonSubsidy.Domain.UnitOfWork
         }
     }
 }
+

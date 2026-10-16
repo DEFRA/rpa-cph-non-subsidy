@@ -1,4 +1,4 @@
-﻿using RPA.CPH.NonSubsidy.Domain.Context;
+using RPA.CPH.NonSubsidy.Domain.Context;
 using RPA.CPH.NonSubsidy.Domain.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -14,12 +14,6 @@ namespace RPA.CPH.NonSubsidy.Domain.Repository
     {
         private CPHContext context;
         private DbSet<T> dbSet;
-
-        public SQLRepository()
-        {
-            this.context = new CPHContext();
-            dbSet = context.Set<T>();
-        }
 
         public SQLRepository(CPHContext context)
         {
@@ -85,3 +79,4 @@ namespace RPA.CPH.NonSubsidy.Domain.Repository
         }
     }
 }
+

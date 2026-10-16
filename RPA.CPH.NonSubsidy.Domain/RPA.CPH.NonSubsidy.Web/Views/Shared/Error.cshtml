@@ -1,4 +1,4 @@
-﻿@model System.Web.Mvc.HandleErrorInfo
+@model Exception
 
 @{
     ViewBag.Title = "Error";
@@ -7,12 +7,11 @@
 <h2>Application Error</h2>
 <h3>An error occurred and the requested process could not be completed.</h3>
 
-@if (Model != null)
+@if (Model != null && Context.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment())
 {
     <p>
-        <b>Error Details:</b> @Model.Exception.Message<br />
+        <b>Error Details:</b> @Model.Message<br />
     </p>
 }
 
 <p>For application support, please contact the Service Desk</p>
-

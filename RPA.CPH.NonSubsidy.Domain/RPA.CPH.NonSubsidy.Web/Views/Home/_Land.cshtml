@@ -1,4 +1,4 @@
-﻿@model RPA.CPH.NonSubsidy.Domain.Classes.CPH.Land
+@model RPA.CPH.NonSubsidy.Domain.Classes.CPH.Land
 
 <h3>Land Details</h3>
 
@@ -7,9 +7,9 @@
         @Html.DisplayNameFor(model => model.CPH)
     </div>
     <div>
-        @Html.TextBoxFor(model => model.County, new { @class = "highlight number-input tracked", @Value = (Model.County > 0 ? Model.County.ToString().PadLeft(2, '0') : "") }) <span style="margin-left: 5px; margin-right: 5px;">/</span>
-        @Html.TextBoxFor(model => model.Parish, new { @class = "highlight number-input tracked", @Value = (Model.Parish > 0 ? Model.Parish.ToString().PadLeft(3, '0') : "") }) <span style="margin-left: 5px; margin-right: 5px;">/</span>
-        @Html.TextBoxFor(model => model.Holding, new { @class = "highlight number-input tracked", @Value = (Model.Holding > 0 ? Model.Holding.ToString().PadLeft(4, '0') : "") })
+        @Html.TextBox("County", Model.County > 0 ? Model.County.ToString().PadLeft(2, '0') : "", new { @class = "highlight number-input tracked" }) <span style="margin-left: 5px; margin-right: 5px;">/</span>
+        @Html.TextBox("Parish", Model.Parish > 0 ? Model.Parish.ToString().PadLeft(3, '0') : "", new { @class = "highlight number-input tracked" }) <span style="margin-left: 5px; margin-right: 5px;">/</span>
+        @Html.TextBox("Holding", Model.Holding > 0 ? Model.Holding.ToString().PadLeft(4, '0') : "", new { @class = "highlight number-input tracked" })
     </div>
 </div>
 
@@ -24,7 +24,7 @@
         @foreach (var landParcel in Model.LandParcels)
         {
             <div class="float-left clear-both">
-                @{Html.RenderPartial("_LandParcel", landParcel);}
+                <partial name="_LandParcel" model="landParcel" />
             </div>
         }
     </div>
@@ -77,3 +77,4 @@
         $(this).parent().parent().parent().hide();
     });
 </script>
+

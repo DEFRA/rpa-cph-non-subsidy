@@ -1,4 +1,4 @@
-﻿@model RPA.CPH.NonSubsidy.Domain.Classes.CPH.Customer
+@model RPA.CPH.NonSubsidy.Domain.Classes.CPH.Customer
 
 @{
     ViewBag.Title = "Customer Details";
@@ -19,7 +19,7 @@
                 @Html.DisplayNameFor(model => model.SBI)
             </div>
             <div>
-                @Html.TextBoxFor(model => model.SBI, new { @class = "highlight input tracked", @Value = (Model.SBI > 0 ? Model.SBI.ToString() : "") })
+                @Html.TextBox("SBI", Model.SBI > 0 ? Model.SBI.ToString() : "", new { @class = "highlight input tracked" })
             </div>
         </div>
         <div class="float-left clear-both data-group">
@@ -32,27 +32,27 @@
         </div>
 
         <div class="float-left clear-both">
-            @Html.Partial("_Case", Model.Case)
+            <partial name="_Case" model="Model.Case" />
         </div>
 
     </div>
 
     <div class="float-left clear-none data-group">
-        @Html.Partial("_Address", Model.Addresses.FirstOrDefault())
+        <partial name="_Address" model="Model.Addresses.FirstOrDefault()" />
     </div>
 
     <div class="float-left clear-none data-group">
-        @Html.Partial("_Land", Model.Land.FirstOrDefault())
+        <partial name="_Land" model="Model.Land.FirstOrDefault()" />
     </div>
 
     <div class="float-right clear-both">
         <button class="float-right clear-both" name="submit" value="save">Save Customer Details</button>
         <button class="float-right clear-both" id="deleteCustomer" name="submit" value="delete">Delete Customer Record</button>
-        @Html.ActionLink("Back to Customer list", "Index", null, new { @id = "backList", @class = "float-right clear-both", @style = "margin-right:15px;" })
+        <a asp-action="Index" id="backList" class="float-right clear-both" style="margin-right:15px;">Back to Customer list</a>
     </div>
 
     <div class="float-right clear-both data-group">
-        @Html.Partial("_Audit", Model.Audit)
+        <partial name="_Audit" model="Model.Audit" />
     </div>
 
     <div class="float-left clear-both">
@@ -64,10 +64,6 @@
 }
 
 @Html.Hidden("Changes", false)
-
-@section Scripts {
-    @Scripts.Render("~/bundles/jqueryval")
-}
 
 <script>
     
@@ -95,3 +91,5 @@
     });
     
 </script>
+
+
