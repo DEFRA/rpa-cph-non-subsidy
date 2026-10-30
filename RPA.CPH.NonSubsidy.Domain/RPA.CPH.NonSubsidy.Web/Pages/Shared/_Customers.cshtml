@@ -11,26 +11,25 @@
 
 <div class="float-left clear-left">
 
-    @using (Html.BeginForm("Index", "Home", FormMethod.Get))
-    {
+    <form action="@Url.Page("/Index")" method="get">
 
         <div class="float-left">
-            <input type="text" name="searchString" id="searchString" />
+            <input type="text" name="searchString" id="searchString" value="@ViewBag.SearchString" />
         </div>
         <div class="float-left" style="margin-left:10px">
             <button class="button" style="position:static;" id="searchButton">Search</button>
-            <button style="position:static;" id="resetButton" onclick="location.href='@Url.Action("Index", new { searchString = string.Empty })'">Reset</button>
+            <button style="position:static;" id="resetButton" onclick="location.href='@Url.Page("/Index", new { searchString = string.Empty })'">Reset</button>
         </div>
-    }
+    </form>
 
 </div>
 
 <div class="float-right clear-none">
     <div class="clear-both float-right">
-        <button class="button" style="position:static;" onclick="location.href='@Url.Action("Customer")'">New Customer</button>
+        <button class="button" style="position:static;" onclick="location.href='@Url.Page("/Customer")'">New Customer</button>
     </div>
     <div class="clear-both float-right">
-        @Html.ActionLink("Download Customer Data", "Extract")        
+        <a asp-page="/Extract">Download Customer Data</a>
     </div>
 </div>
 
@@ -55,7 +54,7 @@
                 <td style="width:400px;">@customer.Addresses.FirstOrDefault()?.FullAddress</td>
                 <td style="width:300px;">@customer.Land.FirstOrDefault()?.LandParcelDetails</td>
                 <td>@customer.Case?.CRMCaseReferenceNumber</td>
-                <td>@Html.ActionLink("Update", "Customer", new { customerId = customer.CustomerId })</td>
+                <td><a asp-page="/Customer" asp-route-customerId="@customer.CustomerId">Update</a></td>
             </tr>
         }
 
@@ -63,7 +62,13 @@
         </div>
 
     <div class="float-left clear-left">
-        @Html.PagedListPager(Model, page => Url.Action("Index", new { SearchString = (string)ViewBag.SearchString, page, pageSize = Model.PageSize }))
+        @* "page" is a Razor Pages route key; keep the existing paging query parameter separate. *@
+        @Html.PagedListPager(Model, page => Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(
+            Url.Page("/Index"), new Dictionary<string, string> {
+                ["SearchString"] = (string)ViewBag.SearchString,
+                ["page"] = page.ToString(),
+                ["pageSize"] = Model.PageSize.ToString()
+            }))
         Showing @(Model.TotalItemCount < Model.FirstItemOnPage ? 0 : Model.FirstItemOnPage) to @Model.LastItemOnPage of @Model.TotalItemCount customers
     </div>
 }

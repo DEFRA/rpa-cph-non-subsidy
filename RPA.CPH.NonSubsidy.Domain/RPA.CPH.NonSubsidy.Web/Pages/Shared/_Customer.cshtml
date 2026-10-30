@@ -7,8 +7,7 @@
 <h2>Customer Details</h2>
 
 
-@using (Html.BeginForm())
-{
+<form action="@Url.Page("/Customer")" method="post">
     @Html.AntiForgeryToken()
 
     <div class="float-left clear-none data-group">
@@ -48,7 +47,7 @@
     <div class="float-right clear-both">
         <button class="float-right clear-both" name="submit" value="save">Save Customer Details</button>
         <button class="float-right clear-both" id="deleteCustomer" name="submit" value="delete">Delete Customer Record</button>
-        <a asp-action="Index" id="backList" class="float-right clear-both" style="margin-right:15px;">Back to Customer list</a>
+        <a asp-page="/Index" id="backList" class="float-right clear-both" style="margin-right:15px;">Back to Customer list</a>
     </div>
 
     <div class="float-right clear-both data-group">
@@ -61,13 +60,13 @@
 
     @Html.Hidden("IsUpdate")
     @Html.HiddenFor(model=>model.CustomerId)
-}
+</form>
 
 @Html.Hidden("Changes", false)
 
 <script>
     
-    $('.tracked').on('change', function (e) {
+    $('form').on('change', '.tracked', function (e) {
         
         $('#Changes').val(true);
     });
@@ -91,5 +90,3 @@
     });
     
 </script>
-
-

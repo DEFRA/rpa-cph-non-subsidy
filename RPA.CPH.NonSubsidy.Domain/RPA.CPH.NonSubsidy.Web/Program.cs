@@ -1,53 +1,12 @@
-using Microsoft.AspNetCore.Authentication.Negotiate;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Server.IIS;
-using RPA.CPH.NonSubsidy.Domain.Context;
-using RPA.CPH.NonSubsidy.Domain.Interfaces;
-using RPA.CPH.NonSubsidy.Domain.Migrations;
-using RPA.CPH.NonSubsidy.Domain.UnitOfWork;
-using RPA.CPH.NonSubsidy.Web.Models;
 using RPA.CPH.NonSubsidy.Web.Services;
-using System.Data.Entity.Migrations;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
-
-var cphConnectionString = builder.Configuration.GetConnectionString("CPHContext")
-    ?? throw new InvalidOperationException("Connection string 'CPHContext' is not configured.");
-
-// IIS in-process hosting authenticates the user itself; Kestrel needs the Negotiate handler.
-var hostedInIis = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("APP_POOL_ID"));
-if (hostedInIis)
-{
-    builder.Services.AddAuthentication(IISServerDefaults.AuthenticationScheme);
-}
-else
-{
-    builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme).AddNegotiate();
-}
-
-builder.Services.AddAuthorization(options =>
-{
-    options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
-});
-
-builder.Services.AddMemoryCache();
-builder.Services.AddSingleton<IClaimsTransformation, IdtRoleClaimsTransformation>();
-
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<IUser, User>();
-builder.Services.AddScoped<IUnitOfWork>(_ => new UnitOfWork(new CPHContext(cphConnectionString)));
-
-builder.Services.AddControllersWithViews();
+builder.Configuration.AddKeyPerFile("/run/secrets", optional: true);
+builder.Services.AddCphApplication(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
-
-// Schema changes are normally applied by the deployment pipeline; this switch keeps the previous
-// "migrate on start-up" behaviour available for environments that still need it.
-if (builder.Configuration.GetValue<bool>("ApplyMigrationsOnStartup"))
-{
-    new DbMigrator(new Configuration(cphConnectionString)).Update();
-}
+app.UseForwardedHeaders();
 
 if (app.Environment.IsDevelopment())
 {
@@ -59,6 +18,10 @@ else
     app.UseHsts();
 }
 
+// Platform probes use HTTP even when the ingress terminates TLS. All application
+// routes retain HTTPS redirection and secure authentication cookies.
+app.UseWhen(context => context.Request.Path != "/health/live" && context.Request.Path != "/health/ready",
+    application => application.UseHttpsRedirection());
 app.UseRequestLocalization(new RequestLocalizationOptions()
     .SetDefaultCulture("en-GB")
     .AddSupportedCultures("en-GB")
@@ -69,10 +32,9 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllerRoute(
-    name: "Default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") })
+    .AllowAnonymous();
 
+app.MapRazorPages();
 app.Run();
-
-public partial class Program { }

@@ -1,5 +1,6 @@
 ﻿@model RPA.CPH.NonSubsidy.Domain.Classes.CPH.LandParcel
 
+<div class="land-parcel float-left clear-both">
 @using (Html.BeginCollectionItem("LandParcels"))
 {
     <div class="float-left clear-both data-group">
@@ -24,8 +25,9 @@
 
     @Html.HiddenFor(model => model.LandId)
     @Html.HiddenFor(model => model.LandParcelId)
-    @Html.HiddenFor(model => model.Active, new { @class="activeFlag", @id = string.Format("{0}Active", Model.LandParcelId) })
+    @Html.HiddenFor(model => model.Active, new { @class="activeFlag" })
 }
+</div>
 
 <script>
     $(function () {
@@ -33,7 +35,7 @@
             
             if($(this).val().toUpperCase() == "FALSE")
             {
-                $(this).parent().hide();
+                $(this).closest('.land-parcel').hide();
             }
         });
     });

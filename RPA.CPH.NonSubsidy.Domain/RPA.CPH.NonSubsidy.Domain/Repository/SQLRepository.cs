@@ -1,12 +1,8 @@
 using RPA.CPH.NonSubsidy.Domain.Context;
 using RPA.CPH.NonSubsidy.Domain.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Data.Entity;
-using System.Linq;
+using Microsoft.EntityFrameworkCore;
+using RPA.CPH.NonSubsidy.Domain.Classes.CPH;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace RPA.CPH.NonSubsidy.Domain.Repository
 {
@@ -21,34 +17,59 @@ namespace RPA.CPH.NonSubsidy.Domain.Repository
             dbSet = context.Set<T>();
         }
 
+        private IQueryable<T> Query()
+        {
+            // EF Core lazy loading is opt-in and is not enabled here. Load the relationships
+            // needed by the editor, lists and CSV up front to avoid hidden per-record queries.
+            // Split queries avoid multiplying rows when joining multiple collections.
+            if (typeof(T) == typeof(Customer))
+                return (IQueryable<T>)context.Customers
+                    .Include(x => x.Addresses)
+                    .Include(x => x.Land).ThenInclude(x => x.LandParcels)
+                    .Include(x => x.Case)
+                    .Include(x => x.Audit).AsSplitQuery();
+            
+            if (typeof(T) == typeof(LandParcel))
+                return (IQueryable<T>)context.LandParcels
+                    .Include(x => x.Land).ThenInclude(x => x.LandParcels)
+                    .Include(x => x.Land).ThenInclude(x => x.Customer).ThenInclude(x => x.Addresses)
+                    .Include(x => x.Land).ThenInclude(x => x.Customer).ThenInclude(x => x.Case)
+                    .Include(x => x.Land).ThenInclude(x => x.Customer).ThenInclude(x => x.Audit)
+                    .AsSplitQuery();
+            
+            return dbSet;
+        }
+
         public virtual IEnumerable<T> FindBy(Expression<Func<T, bool>> predicate)
         {
-            return dbSet.Where(predicate);
+            return Query().Where(predicate);
         }
 
         public virtual T First(Expression<Func<T, bool>> predicate)
         {
-            return dbSet.First<T>(predicate);
+            return Query().First(predicate);
         }
 
         public virtual T FirstOrDefault(Expression<Func<T, bool>> predicate)
         {
-            return dbSet.FirstOrDefault<T>(predicate);
+            return Query().FirstOrDefault(predicate);
         }
 
         public virtual IEnumerable<T> GetAll()
         {
-            return dbSet;
+            return Query();
         }
 
         public virtual IEnumerable<T> GetAllNoTracking()
         {
-            return dbSet.AsNoTracking();
+            return Query().AsNoTrackingWithIdentityResolution();
         }
 
         public virtual T GetById(object id)
         {
-            return dbSet.Find(id);
+            var key = context.Model.FindEntityType(typeof(T)).FindPrimaryKey().Properties.Single().Name;
+            var value = Convert.ToInt32(id);
+            return Query().FirstOrDefault(x => EF.Property<int>(x, key) == value);
         }
 
         public virtual void Create(T obj)
@@ -58,25 +79,26 @@ namespace RPA.CPH.NonSubsidy.Domain.Repository
 
         public virtual void Update(T obj)
         {
-            dbSet.Attach(obj);
-            context.Entry(obj).State = EntityState.Modified;
+            var key = context.Model.FindEntityType(typeof(T)).FindPrimaryKey().Properties.Single().Name;
+            var value = context.Entry(obj).Property(key).CurrentValue;
+            var tracked = dbSet.Find(value) ??
+                throw new DbUpdateConcurrencyException("The record being updated no longer exists.");
+            // Copy this row only. Attach/Update traverse detached graphs and can insert
+            // skipped new inactive parcels or overwrite unrelated tracked children.
+            context.Entry(tracked).CurrentValues.SetValues(obj);
         }
 
         public virtual void Delete(object id)
         {
-            T obj = dbSet.Find(id);
-            Delete(obj);
+            var obj = dbSet.Find(id);
+            ArgumentNullException.ThrowIfNull(obj);
+            dbSet.Remove(obj);
         }
 
         public virtual void Delete(T obj)
         {
-            if (context.Entry(obj).State == EntityState.Detached)
-            {
-                dbSet.Attach(obj);
-            }
-
-            dbSet.Remove(obj);
+            var key = context.Model.FindEntityType(typeof(T)).FindPrimaryKey().Properties.Single().Name;
+            Delete(context.Entry(obj).Property(key).CurrentValue);
         }
     }
 }
-

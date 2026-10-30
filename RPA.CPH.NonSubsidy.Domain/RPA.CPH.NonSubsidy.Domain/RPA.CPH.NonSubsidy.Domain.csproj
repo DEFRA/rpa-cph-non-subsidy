@@ -10,14 +10,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="EntityFramework" Version="6.5.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.7" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Update="Migrations\*.resx">
-      <DependentUpon>%(Filename).cs</DependentUpon>
-    </EmbeddedResource>
+    <!-- Original EF6 migrations and snapshots are a non-executable historical archive. -->
+    <Compile Remove="Migrations\**\*.cs" />
+    <None Include="Migrations\**\*.cs" />
+    <EmbeddedResource Remove="Migrations\*.resx" />
+    <None Include="Migrations\*.resx" />
   </ItemGroup>
 
 </Project>
-

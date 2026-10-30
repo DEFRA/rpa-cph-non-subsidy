@@ -1,12 +1,7 @@
 ﻿using RPA.CPH.NonSubsidy.Domain.Attributes;
 using RPA.CPH.NonSubsidy.Domain.Interfaces;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace RPA.CPH.NonSubsidy.Domain.Classes.CPH
 {
@@ -57,7 +52,8 @@ namespace RPA.CPH.NonSubsidy.Domain.Classes.CPH
 
         public string ToCSV()
         {
-            return string.Format("\"{0}\",\"{1}\",\"{2}\",\"{3}\",\"{4}\",\"{5}\",\"{6}\",\"{7}\",\"{8}\"",
+            object[] fields =
+            [
                 Land.Customer.SBI,
                 Land.Customer.BusinessName,
                 Land.Customer.Addresses.FirstOrDefault().FullAddress,
@@ -67,7 +63,9 @@ namespace RPA.CPH.NonSubsidy.Domain.Classes.CPH
                 Land.Customer.Case.CRMCaseReferenceNumber,
                 Land.Customer.Audit.LastUpdatedBy,
                 Land.Customer.Audit.LastUpdated
-                );
+            ];
+            return string.Join(",", fields.Select(value =>
+                "\"" + (value?.ToString() ?? "").Replace("\"", "\"\"") + "\""));
         }
     }
 }

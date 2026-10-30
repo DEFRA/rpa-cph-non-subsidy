@@ -1,0 +1,10 @@
+@page "/Account/SignOut/{id?}"
+@model RPA.CPH.NonSubsidy.Web.Pages.Account.SignOutModel
+@{
+    ViewBag.Title = "Sign out";
+}
+<h2>Sign out</h2>
+<form asp-page="/Account/SignOut" method="post">
+    @Html.AntiForgeryToken()
+    <button type="submit">Sign out</button>
+</form>

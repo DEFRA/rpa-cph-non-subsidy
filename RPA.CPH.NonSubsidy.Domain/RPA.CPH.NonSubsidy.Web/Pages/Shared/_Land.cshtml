@@ -56,25 +56,25 @@
         var landId = $('#LandId').val();
 
         $.ajax({
-            url: '@Url.Action("_NewLandParcel")',
+            url: '@Url.Page("/NewLandParcel")',
             data: { landId: landId },
             cache: false,
             success: function (html) {
                 $("#landParcelsList").append(html);
                 $("#NoLandParcels").hide();
+                var form = $('#landParcelsList').closest('form');
+                form.removeData('validator').removeData('unobtrusiveValidation');
+                $.validator.unobtrusive.parse(form);
             }
         });
     });
 
-    $('.delete-landParcel').click(function () {
+    $('#landParcelsList').on('click', '.delete-landParcel', function () {
 
         $('#Changes').val(true);
 
-        var id = $(this).data("id");
-
-        $('#' + id + 'Active').val(false);
-
-        $(this).parent().parent().parent().hide();
+        var row = $(this).closest('.land-parcel');
+        row.find('.activeFlag').val(false);
+        row.hide();
     });
 </script>
-

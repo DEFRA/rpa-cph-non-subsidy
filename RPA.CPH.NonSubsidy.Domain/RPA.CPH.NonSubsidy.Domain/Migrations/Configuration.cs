@@ -15,7 +15,7 @@ namespace RPA.CPH.NonSubsidy.Domain.Migrations
 
         public Configuration(string connectionString) : this()
         {
-            TargetDatabase = new DbConnectionInfo(connectionString, "System.Data.SqlClient");
+            TargetDatabase = new DbConnectionInfo(connectionString, "Microsoft.Data.SqlClient");
         }
 
         protected override void Seed(RPA.CPH.NonSubsidy.Domain.Context.CPHContext context)
@@ -35,4 +35,3 @@ namespace RPA.CPH.NonSubsidy.Domain.Migrations
         }
     }
 }
-

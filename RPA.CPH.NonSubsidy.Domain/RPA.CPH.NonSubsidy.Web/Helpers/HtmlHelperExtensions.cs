@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Text.Encodings.Web;
 
@@ -6,6 +5,21 @@ namespace RPA.CPH.NonSubsidy.Web.Helpers
 {
     public static class HtmlHelperExtensions
     {
+        // Supports our ASP.NET Core replacement for the legacy BeginCollectionItem NuGet package.
+        // Keeps field names and validation errors aligned with retained rows after blank rows are removed.
+        public static void PreserveCollectionIndices(HttpContext context, string collectionName, IEnumerable<int> retainedPositions)
+        {
+            if (context?.Request.HasFormContentType != true)
+                return;
+
+            var indices = context.Request.Form[collectionName + ".index"];
+            if (indices.Count == 0)
+                return;
+
+            context.Items["BeginCollectionItem:" + collectionName] =
+                new Queue<string>(retainedPositions.Where(position => position < indices.Count).Select(position => indices[position]));
+        }
+
         // ASP.NET Core port of the BeginCollectionItem helper: renders "<collection>.index" and prefixes
         // all fields written inside the using block with "<collection>[<index>]" so a list of items binds on post.
         public static IDisposable BeginCollectionItem(this IHtmlHelper html, string collectionName)
