@@ -1,0 +1,23 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": { "value": null },
+    "prefix": { "value": null },
+    "environmentName": { "value": null },
+    "tags": { "value": null },
+    "databaseName": { "value": null },
+    "imageRepository": { "value": null },
+    "imageDigest": { "value": null },
+    "entraTenantId": { "value": null },
+    "entraClientId": { "value": null },
+    "entraClientSecretName": { "value": null },
+    "basicAccessRole": { "value": null },
+    "auditNameClaimType": { "value": null },
+    "containerSize": { "value": null },
+    "minReplicas": { "value": null },
+    "maxReplicas": { "value": null },
+    "concurrentRequests": { "value": null },
+    "terminationGracePeriodSeconds": { "value": null }
+  }
+}

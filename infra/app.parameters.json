@@ -1,0 +1,23 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": { "value": "swedencentral" },
+    "prefix": { "value": "cphns" },
+    "environmentName": { "value": "dev" },
+    "tags": { "value": { "application": "cph-non-subsidy", "environment": "dev", "purpose": "manual-test" } },
+    "databaseName": { "value": "CphNonSubsidyTest" },
+    "imageRepository": { "value": "cph-nonsubsidy" },
+    "imageDigest": { "value": null },
+    "entraTenantId": { "value": "16b3c013-d300-468d-ac64-7eda0820b6d3" },
+    "entraClientId": { "value": "085882f3-e4da-4239-9f5c-e57b853ac203" },
+    "entraClientSecretName": { "value": null },
+    "basicAccessRole": { "value": "Cph.BasicAccess" },
+    "auditNameClaimType": { "value": "preferred_username" },
+    "containerSize": { "value": "0.5:1Gi" },
+    "minReplicas": { "value": 1 },
+    "maxReplicas": { "value": 1 },
+    "concurrentRequests": { "value": 10 },
+    "terminationGracePeriodSeconds": { "value": 30 }
+  }
+}

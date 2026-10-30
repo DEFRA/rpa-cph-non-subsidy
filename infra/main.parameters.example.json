@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": { "value": null },
+    "prefix": { "value": null },
+    "environmentName": { "value": null },
+    "tags": { "value": null },
+    "vnetCidr": { "value": null },
+    "acaSubnetCidr": { "value": null },
+    "privateEndpointSubnetCidr": { "value": null },
+    "acaZoneRedundant": { "value": null },
+    "acrSku": { "value": null },
+    "acrZoneRedundant": { "value": null },
+    "logRetentionDays": { "value": null },
+    "applicationInsightsRetentionDays": { "value": null },
+    "keyRingStorageSku": { "value": null },
+    "blobSoftDeleteDays": { "value": null },
+    "vaultSoftDeleteDays": { "value": null },
+    "wrappingKeyRotationDays": { "value": null },
+    "wrappingKeyExpiryDays": { "value": null },
+    "wrappingKeySize": { "value": null },
+    "sqlAdminName": { "value": null },
+    "sqlAdminObjectId": { "value": null },
+    "sqlAdminPrincipalType": { "value": null },
+    "databaseName": { "value": null },
+    "sqlMaxVcores": { "value": null },
+    "sqlMinVcores": { "value": null },
+    "sqlMaxSizeGiB": { "value": null },
+    "sqlZoneRedundant": { "value": null },
+    "sqlBackupRedundancy": { "value": null },
+    "sqlPointInTimeRetentionDays": { "value": null },
+    "sqlLongTermRetention": {
+      "value": {
+        "weeklyRetention": null,
+        "monthlyRetention": null,
+        "yearlyRetention": null,
+        "weekOfYear": null
+      }
+    }
+  }
+}
