@@ -1,0 +1,244 @@
+# Azure DevOps pipeline for RPA CPH Non-Subsidy on Azure App Service (Linux container).
+#
+# Flow: validate IaC -> build and test -> build, scan and push image to ACR (digest recorded) ->
+# deploy the digest to the staging slot -> smoke test -> swap -> verify production.
+#
+# Not yet run against a real organisation. Before first use:
+#   1. Create the variable group named in 'variables' with the values listed there.
+#   2. Create two service connections (workload identity federation / OIDC, no stored secrets):
+#        - acr-push: AcrPush on the registry only (matches pipelinePrincipalObjectId in main.bicep).
+#        - app-deploy: Contributor on the resource group (webapp.bicep creates role assignments, so it also
+#          needs Role Based Access Control Administrator scoped to the key and monitoring resources).
+#   3. Upload webapp.parameters.json (see infra/appservice/webapp.parameters.example.json) as a secure file.
+#   4. Create the 'cph-appservice-prod' environment and add approvals/checks.
+# The CI/CD platform choice (D-16) is recorded in reports/Decisions-Required.md.
+
+trigger:
+  branches:
+    include: [main]
+  paths:
+    exclude: [docs/*, reports/*, '*.md']
+
+pr:
+  branches:
+    include: [main]
+
+parameters:
+  - name: deployFoundation
+    displayName: Deploy or update the foundation (main.bicep) before the application
+    type: boolean
+    default: false
+
+variables:
+  - group: cph-appservice-pipeline # registryName, imageRepository, resourceGroup, siteName, entraTenantId
+  - name: dotnetSdk
+    value: '10.0.x'
+  - name: solution
+    value: 'RPA.CPH.NonSubsidy.Domain/RPA.CPH.NonSubsidy.sln'
+  - name: stagingSlot
+    value: 'staging'
+
+stages:
+  - stage: Validate
+    displayName: Validate infrastructure code
+    jobs:
+      - job: Bicep
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - script: az bicep install
+            displayName: Install Bicep CLI
+          - pwsh: ./infra/appservice/Test-AppServiceTemplates.ps1 -BicepPath "$HOME/.azure/bin/bicep"
+            displayName: Compile, lint and rule self-tests
+
+  - stage: Build
+    displayName: Build and test
+    dependsOn: []
+    jobs:
+      - job: UnitAndIntegration
+        displayName: Unit and integration tests
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: UseDotNet@2
+            inputs:
+              packageType: sdk
+              version: $(dotnetSdk)
+
+          - script: dotnet restore $(solution)
+            displayName: Restore
+
+          # Fails when a direct or transitive package has a known vulnerability.
+          - script: |
+              dotnet list $(solution) package --vulnerable --include-transitive 2>&1 | tee vulnerable.txt
+              if grep -q "has the following vulnerable packages" vulnerable.txt; then echo "Vulnerable packages found"; exit 1; fi
+            displayName: Check NuGet vulnerabilities
+
+          - script: dotnet build $(solution) -c Release --no-restore -warnaserror
+            displayName: Build (warnings are errors)
+
+          - pwsh: ./scripts/Invoke-Tests.ps1 -Suite Unit,Integration
+            displayName: Run unit and integration tests
+
+          - task: PublishTestResults@2
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: VSTest
+              testResultsFiles: 'reports/test-results/*.trx'
+              testRunTitle: Unit and integration
+
+      - job: Browser
+        displayName: Browser end-to-end tests (Playwright)
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: UseDotNet@2
+            inputs:
+              packageType: sdk
+              version: $(dotnetSdk)
+          # ubuntu-latest ships Google Chrome, which the tests fall back to when Edge is absent.
+          - pwsh: ./scripts/Invoke-Tests.ps1 -Suite Browser
+            displayName: Run browser tests
+          - task: PublishTestResults@2
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: VSTest
+              testResultsFiles: 'reports/test-results/browser_*.trx'
+              testRunTitle: Browser
+
+  - stage: Package
+    displayName: Build, scan and push image
+    dependsOn: [Validate, Build]
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - job: Image
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          # The acr-push connection holds AcrPush only. It is a different identity from the runtime identity
+          # (AcrPull) and from the deployment identity.
+          - task: AzureCLI@2
+            name: push
+            displayName: Build, scan, push and record the image digest
+            inputs:
+              azureSubscription: 'acr-push'
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: |
+                ./scripts/Build-PushImage.ps1 -RegistryName '$(registryName)' -Repository '$(imageRepository)' -Version '$(Build.BuildNumber)'
+
+  - stage: Deploy
+    displayName: Deploy to Azure App Service
+    dependsOn: Package
+    condition: succeeded()
+    variables:
+      imageDigest: $[ stageDependencies.Package.Image.outputs['push.imageDigest'] ]
+    jobs:
+      # The 'cph-appservice-prod' environment carries the approval and check gates.
+      - deployment: Activate
+        environment: cph-appservice-prod
+        pool:
+          vmImage: ubuntu-latest
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+
+                - task: DownloadSecureFile@1
+                  name: webappParameters
+                  inputs:
+                    secureFile: webapp.parameters.json
+
+                - ${{ if eq(parameters.deployFoundation, true) }}:
+                    - task: DownloadSecureFile@1
+                      name: foundationParameters
+                      inputs:
+                        secureFile: main.parameters.json
+                    - task: AzureCLI@2
+                      displayName: Foundation what-if and deploy
+                      inputs:
+                        azureSubscription: 'app-deploy'
+                        scriptType: bash
+                        scriptLocation: inlineScript
+                        inlineScript: |
+                          set -euo pipefail
+                          az deployment group what-if --resource-group "$(resourceGroup)" \
+                            --template-file infra/appservice/main.bicep --parameters "@$(foundationParameters.secureFilePath)"
+                          az deployment group create --name "cph-foundation-$(Build.BuildId)" --resource-group "$(resourceGroup)" \
+                            --template-file infra/appservice/main.bicep --parameters "@$(foundationParameters.secureFilePath)"
+
+                # Roll the new digest into the staging slot while production keeps serving its current digest.
+                - task: AzureCLI@2
+                  displayName: Deploy new image to the staging slot
+                  inputs:
+                    azureSubscription: 'app-deploy'
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -euo pipefail
+                      current="$(az webapp config show -g "$(resourceGroup)" -n "$(siteName)" --query linuxFxVersion -o tsv 2>/dev/null || true)"
+                      production="$(echo "$current" | sed -n 's/.*@\(sha256:[0-9a-f]\{64\}\)$/\1/p')"
+                      # First deployment: nothing is running yet, so production starts on the new digest.
+                      production="${production:-$(imageDigest)}"
+                      echo "Production digest: $production"
+                      echo "Staging digest:    $(imageDigest)"
+                      az deployment group create \
+                        --name "cph-application-$(Build.BuildId)" \
+                        --resource-group "$(resourceGroup)" \
+                        --template-file infra/appservice/webapp.bicep \
+                        --parameters "@$(webappParameters.secureFilePath)" \
+                        --parameters imageRepository="$(imageRepository)" \
+                                     productionImageDigest="$production" \
+                                     stagingImageDigest="$(imageDigest)"
+
+                # Anonymous checks plus Key Vault reference resolution on the slot, before any traffic moves.
+                - task: AzureCLI@2
+                  displayName: Validate staging slot
+                  inputs:
+                    azureSubscription: 'app-deploy'
+                    scriptType: pscore
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      $origin = 'https://$(siteName)-$(stagingSlot).azurewebsites.net'
+                      ./scripts/Test-Deployment.ps1 -Origin $origin -ResourceGroup '$(resourceGroup)' -SiteName '$(siteName)' -Slot '$(stagingSlot)' -ExpectedTenantId '$(entraTenantId)'
+
+                - task: AzureCLI@2
+                  displayName: Swap staging into production
+                  inputs:
+                    azureSubscription: 'app-deploy'
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -euo pipefail
+                      az webapp deployment slot swap -g "$(resourceGroup)" -n "$(siteName)" --slot "$(stagingSlot)" --target-slot production
+                      echo "##vso[task.setvariable variable=swapped]true"
+
+                - task: AzureCLI@2
+                  displayName: Validate production
+                  inputs:
+                    azureSubscription: 'app-deploy'
+                    scriptType: pscore
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      ./scripts/Test-Deployment.ps1 -Origin 'https://$(siteName).azurewebsites.net' -ResourceGroup '$(resourceGroup)' -SiteName '$(siteName)' -ExpectedTenantId '$(entraTenantId)'
+
+                - task: PublishBuildArtifacts@1
+                  condition: always()
+                  inputs:
+                    PathtoPublish: reports/deployment-validation
+                    ArtifactName: deployment-validation
+
+                # Rollback: only after a swap has happened and production validation then failed. The previous image
+                # is now in the staging slot, so swapping again restores it. A failure before the swap leaves production untouched.
+                - task: AzureCLI@2
+                  displayName: Roll back (swap back) when production validation failed
+                  condition: and(failed(), eq(variables['swapped'], 'true'))
+                  inputs:
+                    azureSubscription: 'app-deploy'
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -euo pipefail
+                      az webapp deployment slot swap -g "$(resourceGroup)" -n "$(siteName)" --slot "$(stagingSlot)" --target-slot production
+                      echo "Rolled back by swapping slots. Schema/data rollback is a DBA decision."

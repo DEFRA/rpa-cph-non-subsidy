@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0.403-noble AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.404-noble AS build
 WORKDIR /src
 COPY RPA.CPH.NonSubsidy.Domain/RPA.CPH.NonSubsidy.Domain/RPA.CPH.NonSubsidy.Domain.csproj \
     RPA.CPH.NonSubsidy.Domain/RPA.CPH.NonSubsidy.Domain/
@@ -20,7 +20,14 @@ RUN dotnet publish RPA.CPH.NonSubsidy.Domain/RPA.CPH.NonSubsidy.Web/RPA.CPH.NonS
 -c Release --no-restore -o /out /p:UseAppHost=false
 
 # Ubuntu includes ICU: en-GB dates/validation must not use invariant globalization.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.14-noble AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.15-noble AS final
+ARG BUILD_VERSION=local
+ARG VCS_REF=unknown
+ARG BUILD_DATE=unknown
+LABEL org.opencontainers.image.title="rpa-cph-non-subsidy" \
+      org.opencontainers.image.version="$BUILD_VERSION" \
+      org.opencontainers.image.revision="$VCS_REF" \
+      org.opencontainers.image.created="$BUILD_DATE"
 WORKDIR /app
 COPY --from=build /out/ ./
 ENV ASPNETCORE_HTTP_PORTS=8080 \

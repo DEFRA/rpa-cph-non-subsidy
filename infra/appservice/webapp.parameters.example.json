@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": { "value": null },
+    "prefix": { "value": "cphns" },
+    "environmentName": { "value": "dev" },
+    "tags": { "value": { "application": "cph-non-subsidy", "environment": "dev", "hosting": "app-service" } },
+    "databaseName": { "value": null },
+    "imageRepository": { "value": "cph-nonsubsidy" },
+    "productionImageDigest": { "value": null },
+    "stagingImageDigest": { "value": null },
+    "enableStagingSlot": { "value": null },
+    "stagingSlotName": { "value": "staging" },
+    "entraTenantId": { "value": null },
+    "entraClientId": { "value": null },
+    "entraClientSecretName": { "value": null },
+    "basicAccessRole": { "value": null },
+    "auditNameClaimType": { "value": null },
+    "trustedProxyCidr": { "value": null },
+    "routeAllOutboundThroughVnet": { "value": null },
+    "additionalAllowedHosts": { "value": [] },
+    "alertEmailAddresses": { "value": [] }
+  }
+}

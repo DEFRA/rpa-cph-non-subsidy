@@ -1,5 +1,8 @@
 # Bicep handoff
 
+> **Also available:** an Azure App Service (Linux container) hosting option lives in [appservice/](./appservice/README.md).
+> It is independent of the Container Apps templates below.
+
 This is a repository-only infrastructure handoff, not a deployment or production
 approval. The receiving team supplies approved parameter values and manually
 tests in its own subscription. No regional, quota, Azure Policy, what-if, cost,
