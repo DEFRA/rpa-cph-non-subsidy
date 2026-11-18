@@ -29,6 +29,9 @@
 !RPA.CPH.NonSubsidy.Domain/RPA.CPH.NonSubsidy.Web/Pages/**
 !RPA.CPH.NonSubsidy.Domain/RPA.CPH.NonSubsidy.Web/wwwroot/
 !RPA.CPH.NonSubsidy.Domain/RPA.CPH.NonSubsidy.Web/wwwroot/**
+!RPA.CPH.NonSubsidy.Domain/RPA.CPH.NonSubsidy.Web.Tests/
+!RPA.CPH.NonSubsidy.Domain/RPA.CPH.NonSubsidy.Web.Tests/**
+!dev-entrypoint.sh
 **/bin/
 **/obj/
 **/Properties/
