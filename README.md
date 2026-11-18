@@ -139,9 +139,14 @@ Omitting `NUGET_SOURCE` or passing an empty value preserves normal restore behav
 Authenticated feeds require separate BuildKit secret setup; never put credentials
 in build arguments. Recreate containers after rebuilding the image.
 
-The multi-stage [Dockerfile](./Dockerfile) pins SDK 10.0.403 and ASP.NET runtime
-10.0.14 on Ubuntu Noble, includes ICU for `en-GB`, runs as UID 1654 and listens on
-HTTP 8080. Only published application files enter the runtime image.
+The multi-stage [Dockerfile](./Dockerfile) follows the Defra .NET container
+standard ([defra-docker-dotnetcore](https://github.com/DEFRA/defra-docker-dotnetcore)):
+a `development` stage (`defradigital/dotnetcore-development`) restores, tests
+and publishes the app; a `production` stage (`defradigital/dotnetcore`) runs it
+as the non-root `dotnet` user with write permissions removed.
+`DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false` keeps ICU enabled for `en-GB`,
+and it listens on HTTP 8080. Only published application files enter the
+runtime image.
 
 <details>
 <summary>Local Docker HTTPS setup (Windows development certificate)</summary>
