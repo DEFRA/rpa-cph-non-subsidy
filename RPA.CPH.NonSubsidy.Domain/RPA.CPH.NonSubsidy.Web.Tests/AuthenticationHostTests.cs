@@ -19,10 +19,7 @@ using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using RPA.CPH.NonSubsidy.Domain.Interfaces;
 using RPA.CPH.NonSubsidy.Domain.UnitOfWork;
-using Microsoft.ApplicationInsights;
-using Microsoft.ApplicationInsights.Channel;
-using Microsoft.ApplicationInsights.DataContracts;
-using System.Collections.Concurrent;
+using OpenTelemetry.Trace;
 
 namespace RPA.CPH.NonSubsidy.Web.Tests;
 
@@ -30,28 +27,11 @@ namespace RPA.CPH.NonSubsidy.Web.Tests;
 [TestCategory("Integration")]
 public class AuthenticationHostTests
 {
-    internal sealed class CaptureChannel : ITelemetryChannel
-    {
-        public ConcurrentBag<ITelemetry> Items { get; } = [];
-        public bool? DeveloperMode { get; set; }
-        public string EndpointAddress { get; set; }
-        public void Send(ITelemetry item) => Items.Add(item);
-        public void Flush() { }
-        public void Dispose() { }
-    }
-
     internal sealed class OfflineApplication : WebApplicationFactory<Program>
     {
-        private readonly CaptureChannel telemetry;
         private readonly Action<IServiceCollection> configure;
         private readonly string environment;
         private readonly string allowedHosts = "localhost";
-
-        internal OfflineApplication(CaptureChannel telemetry)
-        {
-            this.telemetry = telemetry;
-            environment = "Production";
-        }
 
         internal OfflineApplication(Action<IServiceCollection> configure = null, string environment = "Production",
             string allowedHosts = "localhost")
@@ -68,16 +48,10 @@ public class AuthenticationHostTests
             foreach (var pair in RuntimeConfigurationTests.Settings())
                 builder.UseSetting(pair.Key, pair.Value);
             builder.UseSetting("AllowedHosts", allowedHosts);
-            if (telemetry != null)
-                builder.UseSetting("ApplicationInsights:ConnectionString",
-                    "InstrumentationKey=33333333-3333-3333-3333-333333333333;IngestionEndpoint=https://unused.invalid/");
             builder.ConfigureAppConfiguration((_, configuration) =>
             {
                 var settings = RuntimeConfigurationTests.Settings();
                 settings["AllowedHosts"] = allowedHosts;
-                if (telemetry != null)
-                    settings["ApplicationInsights:ConnectionString"] =
-                        "InstrumentationKey=33333333-3333-3333-3333-333333333333;IngestionEndpoint=https://unused.invalid/";
                 configuration.AddInMemoryCollection(settings);
             });
             builder.ConfigureServices(services =>
@@ -85,13 +59,6 @@ public class AuthenticationHostTests
                 services.RemoveAll<IUnitOfWork>();
                 services.AddScoped<IUnitOfWork, FakeUnitOfWork>();
                 services.AddDataProtection().UseEphemeralDataProtectionProvider();
-                if (telemetry != null)
-                {
-                    services.Configure<Microsoft.ApplicationInsights.AspNetCore.Extensions.ApplicationInsightsServiceOptions>(
-                        TelemetryTests.DisableNetworkBackgroundModules);
-                    services.RemoveAll<ITelemetryChannel>();
-                    services.AddSingleton<ITelemetryChannel>(telemetry);
-                }
                 services.AddControllersWithViews().AddApplicationPart(typeof(TestSessionController).Assembly);
                 services.AddTransient<IStartupFilter, TestControllerEndpoints>();
                 services.PostConfigure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, options =>
@@ -282,42 +249,10 @@ public class AuthenticationHostTests
     }
 
     [TestMethod]
-    public void ConfiguredSdkPipeline_PreservesDiagnosticTelemetryAndCorrelationInMemory()
+    public void UnconfiguredTelemetry_HostDoesNotStartTraceProvider()
     {
-        var channel = new CaptureChannel();
-        using var application = new OfflineApplication(channel);
-        var telemetry = application.Services.GetRequiredService<TelemetryClient>();
-        var request = new RequestTelemetry
-        {
-            Name = "GET /synthetic-test",
-            Url = new Uri("https://unused.invalid/synthetic-test"),
-            ResponseCode = "201",
-            Success = true,
-            Duration = TimeSpan.FromMilliseconds(9)
-        };
-        request.Context.Operation.Id = "0123456789abcdef0123456789abcdef";
-        request.Properties["fixture"] = "synthetic";
-        telemetry.TrackRequest(request);
-        telemetry.TrackTrace("synthetic trace");
-        telemetry.TrackException(new Exception("synthetic exception"));
-        telemetry.TrackDependency(new DependencyTelemetry
-        {
-            Type = "SQL", Name = "synthetic dependency", Target = "unused.invalid",
-            Success = true, Duration = TimeSpan.FromMilliseconds(2)
-        });
-        telemetry.TrackEvent("synthetic event");
-        telemetry.TrackMetric("synthetic metric", 1);
-        telemetry.Flush();
-        var exported = channel.Items.OfType<RequestTelemetry>().Single(item => item.Name == request.Name);
-        Assert.AreEqual("201", exported.ResponseCode);
-        Assert.AreEqual(request.Url, exported.Url);
-        Assert.AreEqual(request.Context.Operation.Id, exported.Context.Operation.Id);
-        Assert.AreEqual("synthetic", exported.Properties["fixture"]);
-        Assert.IsTrue(channel.Items.OfType<TraceTelemetry>().Any(item => item.Message == "synthetic trace"));
-        Assert.IsTrue(channel.Items.OfType<ExceptionTelemetry>().Any(item => item.Exception.Message == "synthetic exception"));
-        Assert.IsTrue(channel.Items.OfType<DependencyTelemetry>().Any(item => item.Name == "synthetic dependency"));
-        Assert.IsTrue(channel.Items.OfType<EventTelemetry>().Any(item => item.Name == "synthetic event"));
-        Assert.IsTrue(channel.Items.OfType<MetricTelemetry>().Any(item => item.Name == "synthetic metric"));
+        using var application = new OfflineApplication();
+        Assert.IsNull(application.Services.GetService<TracerProvider>());
     }
 
     [TestMethod]

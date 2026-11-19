@@ -1,45 +1,91 @@
-using System.Reflection;
 using Azure.Identity;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.ApplicationInsights.Channel;
-using Microsoft.ApplicationInsights.DataContracts;
-using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.ApplicationInsights.AspNetCore.Extensions;
+using Azure.Monitor.OpenTelemetry.AspNetCore;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using OpenTelemetry.Instrumentation.AspNetCore;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using RPA.CPH.NonSubsidy.Web.Services;
 
 namespace RPA.CPH.NonSubsidy.Web.Tests;
 
 [TestClass]
+[TestCategory("Unit")]
 public class TelemetryTests
 {
+    private const string Connection =
+        "InstrumentationKey=33333333-3333-3333-3333-333333333333;IngestionEndpoint=https://unused.invalid/";
+    private const string Identity = "33333333-3333-3333-3333-333333333333";
+
     [TestMethod]
-    [TestCategory("Unit")]
-    public void UnconfiguredTelemetry_RegistersNoExporter()
+    [DataRow(null)]
+    [DataRow("")]
+    [DataRow(" ")]
+    public void MissingOrBlankConnection_RegistersNoTelemetry(string connection)
     {
-        var services = new ServiceCollection();
-        services.AddCphApplicationInsights(RuntimeConfigurationTests.Configuration());
-        Assert.IsFalse(services.Any(service => service.ServiceType == typeof(TelemetryConfiguration)));
+        var settings = new Dictionary<string, string>();
+        if (connection != null)
+            settings["APPLICATIONINSIGHTS_CONNECTION_STRING"] = connection;
+        var services = Register(settings);
+
+        Assert.IsFalse(services.Any(service => service.ServiceType == typeof(TracerProvider)));
+        Assert.IsFalse(services.Any(service => service.ServiceType == typeof(MeterProvider)));
     }
 
     [TestMethod]
     [DataRow("")]
     [DataRow(" ")]
+    public void BlankPrimaryConnection_DisablesEvenWhenFallbackIsConfigured(string connection)
+    {
+        var services = Register(new()
+        {
+            ["APPLICATIONINSIGHTS_CONNECTION_STRING"] = connection,
+            ["ApplicationInsights:ConnectionString"] = Connection
+        });
+        Assert.IsFalse(services.Any(service => service.ServiceType == typeof(TracerProvider)));
+    }
+
+    [TestMethod]
+    [DataRow("APPLICATIONINSIGHTS_CONNECTION_STRING", true)]
+    [DataRow("ApplicationInsights:ConnectionString", true)]
+    [DataRow("APPLICATIONINSIGHTS_CONNECTION_STRING", false)]
+    [DataRow("ApplicationInsights:ConnectionString", false)]
+    public void ConfiguredTelemetry_RegistersDistroWithExplicitSettings(string connectionKey, bool enableIdentity)
+    {
+        var settings = new Dictionary<string, string> { [connectionKey] = Connection };
+        if (connectionKey == "APPLICATIONINSIGHTS_CONNECTION_STRING")
+            settings["ApplicationInsights:ConnectionString"] = "ignored";
+        if (enableIdentity)
+            settings["Telemetry:ManagedIdentityClientId"] = Identity;
+        var services = Register(settings);
+
+        Assert.IsTrue(services.Any(service => service.ServiceType == typeof(TracerProvider)));
+        Assert.IsTrue(services.Any(service => service.ServiceType == typeof(MeterProvider)));
+        // Resolve options only, not providers: no exporters, Live Metrics or metadata calls are started.
+        using var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IOptions<AzureMonitorOptions>>().Value;
+        Assert.AreEqual(Connection, options.ConnectionString);
+        if (enableIdentity)
+            Assert.IsInstanceOfType<ManagedIdentityCredential>(options.Credential);
+        else
+            Assert.IsNull(options.Credential);
+    }
+
+    [TestMethod]
+    [DataRow(null)]
+    [DataRow("")]
+    [DataRow(" ")]
     [DataRow("not-a-guid")]
     [DataRow("00000000-0000-0000-0000-000000000000")]
     [DataRow("DefaultAzureCredential")]
-    [TestCategory("Unit")]
     public void InvalidManagedIdentity_FailsAtRegistration(string clientId)
     {
-        var services = new ServiceCollection();
-        var settings = new Dictionary<string, string>
+        var error = Assert.ThrowsExactly<InvalidOperationException>(() => Register(new()
         {
             ["Telemetry:ManagedIdentityClientId"] = clientId,
             ["APPLICATIONINSIGHTS_CONNECTION_STRING"] = Connection
-        };
-        var error = Assert.ThrowsExactly<InvalidOperationException>(() =>
-            services.AddCphApplicationInsights(RuntimeConfigurationTests.Configuration(settings)));
+        }));
         StringAssert.Contains(error.Message, "Telemetry:ManagedIdentityClientId");
     }
 
@@ -47,67 +93,37 @@ public class TelemetryTests
     [DataRow(null)]
     [DataRow("")]
     [DataRow(" ")]
-    [TestCategory("Unit")]
     public void ManagedIdentityWithoutConnectionString_FailsInsteadOfDisablingTelemetry(string connection)
     {
-        var services = new ServiceCollection();
-        var settings = new Dictionary<string, string>
+        var error = Assert.ThrowsExactly<InvalidOperationException>(() => Register(new()
         {
-            ["Telemetry:ManagedIdentityClientId"] = "33333333-3333-3333-3333-333333333333",
-            ["APPLICATIONINSIGHTS_CONNECTION_STRING"] = connection
-        };
-        Assert.ThrowsExactly<InvalidOperationException>(() =>
-            services.AddCphApplicationInsights(RuntimeConfigurationTests.Configuration(settings)));
+            ["Telemetry:ManagedIdentityClientId"] = Identity,
+            ["APPLICATIONINSIGHTS_CONNECTION_STRING"] = connection,
+            ["ApplicationInsights:ConnectionString"] = connection == null ? null : Connection
+        }));
+        StringAssert.Contains(error.Message, "Telemetry:ManagedIdentityClientId");
     }
 
     [TestMethod]
-    [DataRow("APPLICATIONINSIGHTS_CONNECTION_STRING", true)]
-    [DataRow("ApplicationInsights:ConnectionString", true)]
-    [DataRow("APPLICATIONINSIGHTS_CONNECTION_STRING", false)]
-    [TestCategory("Integration")]
-    public void RealSdkConfiguration_UsesOnlyExplicitManagedIdentityWhenConfigured(string connectionKey, bool enableIdentity)
+    [DataRow("/health/live", false)]
+    [DataRow("/health/ready", false)]
+    [DataRow("/Home/Customer", true)]
+    [DataRow("/health/live-extra", true)]
+    public void RequestTraceFilter_ExcludesOnlyProbePaths(string path, bool expected)
     {
-        var builder = WebApplication.CreateBuilder();
-        var settings = new Dictionary<string, string> { [connectionKey] = Connection };
-        if (enableIdentity)
-            settings["Telemetry:ManagedIdentityClientId"] = "33333333-3333-3333-3333-333333333333";
-        builder.Services.AddCphApplicationInsights(RuntimeConfigurationTests.Configuration(settings));
-        builder.Services.Configure<ApplicationInsightsServiceOptions>(DisableNetworkBackgroundModules);
-        using var channel = new AuthenticationHostTests.CaptureChannel();
-        builder.Services.RemoveAll<ITelemetryChannel>();
-        builder.Services.AddSingleton<ITelemetryChannel>(channel);
-        using var app = builder.Build();
-        var configuration = app.Services.GetRequiredService<TelemetryConfiguration>();
-        Assert.AreEqual(Connection, configuration.ConnectionString);
-        // The SDK exposes its credential envelope internally, not as a public getter.
-        var envelopeProperty = typeof(TelemetryConfiguration).GetProperty("CredentialEnvelope",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.IsNotNull(envelopeProperty);
-        var envelope = envelopeProperty.GetValue(configuration);
-        if (enableIdentity)
-        {
-            Assert.IsNotNull(envelope);
-            var credentialProperty = envelope.GetType().GetProperty("Credential",
-                BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.IsNotNull(credentialProperty);
-            Assert.IsInstanceOfType<ManagedIdentityCredential>(credentialProperty.GetValue(envelope));
-        }
-        else
-        {
-            Assert.IsNull(envelope);
-        }
-        Assert.IsFalse(channel.Items.OfType<RequestTelemetry>().Any());
+        var services = Register(new() { ["APPLICATIONINSIGHTS_CONNECTION_STRING"] = Connection });
+        using var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IOptions<AspNetCoreTraceInstrumentationOptions>>().Value;
+        var context = new DefaultHttpContext();
+        context.Request.Path = path;
+
+        Assert.AreEqual(expected, options.Filter(context));
     }
 
-    private const string Connection =
-        "InstrumentationKey=33333333-3333-3333-3333-333333333333;IngestionEndpoint=https://unused.invalid/";
-
-    // Test hosts capture ingestion in memory; prevent separate Live Metrics/metadata network calls.
-    internal static void DisableNetworkBackgroundModules(ApplicationInsightsServiceOptions options)
+    private static ServiceCollection Register(Dictionary<string, string> settings)
     {
-        options.EnableQuickPulseMetricStream = false;
-        options.EnableHeartbeat = false;
-        options.EnableAppServicesHeartbeatTelemetryModule = false;
-        options.EnableAzureInstanceMetadataTelemetryModule = false;
+        var services = new ServiceCollection();
+        services.AddCphApplicationInsights(RuntimeConfigurationTests.Configuration(settings));
+        return services;
     }
 }
