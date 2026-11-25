@@ -1,0 +1,62 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="445efe52-6a9f-4280-9f1a-412887dbfc69" name="v-dhim@DESKTOP-6BHBE7L 2026-11-17 15:11:29" runUser="REDMOND\v-dhim" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-11-17T15:11:29.0672848+05:30" queuing="2026-11-17T15:11:29.0672864+05:30" start="2026-11-17T15:11:24.3425024+05:30" finish="2026-11-17T15:11:31.9943418+05:30" />
+  <TestSettings name="default" id="df002f5f-7df0-4764-bcee-a93cdaedd9e5">
+    <Deployment runDeploymentRoot="v-dhim_DESKTOP-6BHBE7L_2026-11-17_15_11_29" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="5264918b-78f7-4f41-851e-349b7d96fe00" testId="b4b08a58-fede-e284-c6c1-76145f20be2b" testName="ProductionSource_HasNoAutomaticSchemaOperations" computerName="DESKTOP-6BHBE7L" duration="00:00:00.3510660" startTime="2026-11-17T15:11:28.9408495+05:30" endTime="2026-11-17T15:11:29.2919133+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5264918b-78f7-4f41-851e-349b7d96fe00" />
+    <UnitTestResult executionId="4447284c-6dfb-47c5-885a-41ff57cfa471" testId="a27bc423-577e-278b-6569-b4aa4ee0b9c1" testName="SqlServerModel_PreservesEveryHistoricalTableColumnTypeNullabilityAndKey" computerName="DESKTOP-6BHBE7L" duration="00:00:00.1480610" startTime="2026-11-17T15:11:29.2920981+05:30" endTime="2026-11-17T15:11:29.4401567+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4447284c-6dfb-47c5-885a-41ff57cfa471" />
+    <UnitTestResult executionId="a2db410e-4cab-4fc7-8538-2e822e49affc" testId="d3f123fa-95e7-1cf7-fb44-613c72204c09" testName="Context_UsesModernProviderWithoutOpeningConnection" computerName="DESKTOP-6BHBE7L" duration="00:00:02.6325970" startTime="2026-11-17T15:11:26.2939580+05:30" endTime="2026-11-17T15:11:28.9263475+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a2db410e-4cab-4fc7-8538-2e822e49affc" />
+    <UnitTestResult executionId="0dc6aa9a-0cb5-4876-82b7-acece94fda80" testId="130fedd5-3871-afb7-5107-90d8e6613da5" testName="HistoricalMigrations_AreNotExecutableOrEmbeddedAndEf6IsNotReferenced" computerName="DESKTOP-6BHBE7L" duration="00:00:00.0091880" startTime="2026-11-17T15:11:28.9315623+05:30" endTime="2026-11-17T15:11:28.9407495+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0dc6aa9a-0cb5-4876-82b7-acece94fda80" />
+    <UnitTestResult executionId="0ade11a5-bda2-4192-a647-2542a7bea735" testId="214fa948-81f8-386e-37a8-01547dc388eb" testName="SqlServerModel_PreservesRequiredSharedKeysAndAllFiveCascadeForeignKeys" computerName="DESKTOP-6BHBE7L" duration="00:00:00.2269080" startTime="2026-11-17T15:11:29.4402940+05:30" endTime="2026-11-17T15:11:29.6671992+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0ade11a5-bda2-4192-a647-2542a7bea735" />
+    <UnitTestResult executionId="c63ccb41-5e20-4b70-a5e4-afaaf48db24b" testId="e348d2cf-227b-36c0-bccc-0778307acddc" testName="SqlServerQueries_TranslateExactSbiSearchAndActiveParcelGraphWithoutConnection" computerName="DESKTOP-6BHBE7L" duration="00:00:02.0528540" startTime="2026-11-17T15:11:29.6676275+05:30" endTime="2026-11-17T15:11:31.7204815+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c63ccb41-5e20-4b70-a5e4-afaaf48db24b" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Context_UsesModernProviderWithoutOpeningConnection" storage="c:\users\v-dhim\downloads\defra\github\atos\rpa-cph-non-subsidy\rpa.cph.nonsubsidy.domain\rpa.cph.nonsubsidy.domain.tests\bin\release\net10.0\rpa.cph.nonsubsidy.domain.tests.dll" id="d3f123fa-95e7-1cf7-fb44-613c72204c09">
+      <Execution id="a2db410e-4cab-4fc7-8538-2e822e49affc" />
+      <TestMethod codeBase="C:\Users\v-dhim\Downloads\Defra\GitHub\Atos\rpa-cph-non-subsidy\RPA.CPH.NonSubsidy.Domain\RPA.CPH.NonSubsidy.Domain.Tests\bin\Release\net10.0\RPA.CPH.NonSubsidy.Domain.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="RPA.CPH.NonSubsidy.Domain.Tests.SqlProviderTests" name="Context_UsesModernProviderWithoutOpeningConnection" />
+    </UnitTest>
+    <UnitTest name="SqlServerModel_PreservesRequiredSharedKeysAndAllFiveCascadeForeignKeys" storage="c:\users\v-dhim\downloads\defra\github\atos\rpa-cph-non-subsidy\rpa.cph.nonsubsidy.domain\rpa.cph.nonsubsidy.domain.tests\bin\release\net10.0\rpa.cph.nonsubsidy.domain.tests.dll" id="214fa948-81f8-386e-37a8-01547dc388eb">
+      <Execution id="0ade11a5-bda2-4192-a647-2542a7bea735" />
+      <TestMethod codeBase="C:\Users\v-dhim\Downloads\Defra\GitHub\Atos\rpa-cph-non-subsidy\RPA.CPH.NonSubsidy.Domain\RPA.CPH.NonSubsidy.Domain.Tests\bin\Release\net10.0\RPA.CPH.NonSubsidy.Domain.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="RPA.CPH.NonSubsidy.Domain.Tests.SqlProviderTests" name="SqlServerModel_PreservesRequiredSharedKeysAndAllFiveCascadeForeignKeys" />
+    </UnitTest>
+    <UnitTest name="HistoricalMigrations_AreNotExecutableOrEmbeddedAndEf6IsNotReferenced" storage="c:\users\v-dhim\downloads\defra\github\atos\rpa-cph-non-subsidy\rpa.cph.nonsubsidy.domain\rpa.cph.nonsubsidy.domain.tests\bin\release\net10.0\rpa.cph.nonsubsidy.domain.tests.dll" id="130fedd5-3871-afb7-5107-90d8e6613da5">
+      <Execution id="0dc6aa9a-0cb5-4876-82b7-acece94fda80" />
+      <TestMethod codeBase="C:\Users\v-dhim\Downloads\Defra\GitHub\Atos\rpa-cph-non-subsidy\RPA.CPH.NonSubsidy.Domain\RPA.CPH.NonSubsidy.Domain.Tests\bin\Release\net10.0\RPA.CPH.NonSubsidy.Domain.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="RPA.CPH.NonSubsidy.Domain.Tests.SqlProviderTests" name="HistoricalMigrations_AreNotExecutableOrEmbeddedAndEf6IsNotReferenced" />
+    </UnitTest>
+    <UnitTest name="SqlServerQueries_TranslateExactSbiSearchAndActiveParcelGraphWithoutConnection" storage="c:\users\v-dhim\downloads\defra\github\atos\rpa-cph-non-subsidy\rpa.cph.nonsubsidy.domain\rpa.cph.nonsubsidy.domain.tests\bin\release\net10.0\rpa.cph.nonsubsidy.domain.tests.dll" id="e348d2cf-227b-36c0-bccc-0778307acddc">
+      <Execution id="c63ccb41-5e20-4b70-a5e4-afaaf48db24b" />
+      <TestMethod codeBase="C:\Users\v-dhim\Downloads\Defra\GitHub\Atos\rpa-cph-non-subsidy\RPA.CPH.NonSubsidy.Domain\RPA.CPH.NonSubsidy.Domain.Tests\bin\Release\net10.0\RPA.CPH.NonSubsidy.Domain.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="RPA.CPH.NonSubsidy.Domain.Tests.SqlProviderTests" name="SqlServerQueries_TranslateExactSbiSearchAndActiveParcelGraphWithoutConnection" />
+    </UnitTest>
+    <UnitTest name="ProductionSource_HasNoAutomaticSchemaOperations" storage="c:\users\v-dhim\downloads\defra\github\atos\rpa-cph-non-subsidy\rpa.cph.nonsubsidy.domain\rpa.cph.nonsubsidy.domain.tests\bin\release\net10.0\rpa.cph.nonsubsidy.domain.tests.dll" id="b4b08a58-fede-e284-c6c1-76145f20be2b">
+      <Execution id="5264918b-78f7-4f41-851e-349b7d96fe00" />
+      <TestMethod codeBase="C:\Users\v-dhim\Downloads\Defra\GitHub\Atos\rpa-cph-non-subsidy\RPA.CPH.NonSubsidy.Domain\RPA.CPH.NonSubsidy.Domain.Tests\bin\Release\net10.0\RPA.CPH.NonSubsidy.Domain.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="RPA.CPH.NonSubsidy.Domain.Tests.SqlProviderTests" name="ProductionSource_HasNoAutomaticSchemaOperations" />
+    </UnitTest>
+    <UnitTest name="SqlServerModel_PreservesEveryHistoricalTableColumnTypeNullabilityAndKey" storage="c:\users\v-dhim\downloads\defra\github\atos\rpa-cph-non-subsidy\rpa.cph.nonsubsidy.domain\rpa.cph.nonsubsidy.domain.tests\bin\release\net10.0\rpa.cph.nonsubsidy.domain.tests.dll" id="a27bc423-577e-278b-6569-b4aa4ee0b9c1">
+      <Execution id="4447284c-6dfb-47c5-885a-41ff57cfa471" />
+      <TestMethod codeBase="C:\Users\v-dhim\Downloads\Defra\GitHub\Atos\rpa-cph-non-subsidy\RPA.CPH.NonSubsidy.Domain\RPA.CPH.NonSubsidy.Domain.Tests\bin\Release\net10.0\RPA.CPH.NonSubsidy.Domain.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="RPA.CPH.NonSubsidy.Domain.Tests.SqlProviderTests" name="SqlServerModel_PreservesEveryHistoricalTableColumnTypeNullabilityAndKey" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="b4b08a58-fede-e284-c6c1-76145f20be2b" executionId="5264918b-78f7-4f41-851e-349b7d96fe00" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a27bc423-577e-278b-6569-b4aa4ee0b9c1" executionId="4447284c-6dfb-47c5-885a-41ff57cfa471" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d3f123fa-95e7-1cf7-fb44-613c72204c09" executionId="a2db410e-4cab-4fc7-8538-2e822e49affc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="130fedd5-3871-afb7-5107-90d8e6613da5" executionId="0dc6aa9a-0cb5-4876-82b7-acece94fda80" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="214fa948-81f8-386e-37a8-01547dc388eb" executionId="0ade11a5-bda2-4192-a647-2542a7bea735" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e348d2cf-227b-36c0-bccc-0778307acddc" executionId="c63ccb41-5e20-4b70-a5e4-afaaf48db24b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="6" executed="6" passed="6" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>NUnit Adapter 6.3.1.0: Test execution started&#xD;
+Running selected tests in C:\Users\v-dhim\Downloads\Defra\GitHub\Atos\rpa-cph-non-subsidy\RPA.CPH.NonSubsidy.Domain\RPA.CPH.NonSubsidy.Domain.Tests\bin\Release\net10.0\RPA.CPH.NonSubsidy.Domain.Tests.dll&#xD;
+   NUnit3TestExecutor discovered 6 of 6 NUnit test cases using Current Discovery mode, Non-Explicit run&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

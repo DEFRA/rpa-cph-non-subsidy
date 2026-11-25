@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": { "value": "swedencentral" },
+    "prefix": { "value": "cphns" },
+    "environmentName": { "value": "dev" },
+    "tags": { "value": { "application": "cph-non-subsidy", "environment": "dev", "purpose": "manual-test" } },
+    "vnetCidr": { "value": "10.60.0.0/16" },
+    "acaSubnetCidr": { "value": "10.60.0.0/24" },
+    "privateEndpointSubnetCidr": { "value": "10.60.1.0/28" },
+    "acaZoneRedundant": { "value": false },
+    "acrSku": { "value": "Basic" },
+    "acrZoneRedundant": { "value": false },
+    "logRetentionDays": { "value": 30 },
+    "applicationInsightsRetentionDays": { "value": 30 },
+    "keyRingStorageSku": { "value": "Standard_LRS" },
+    "blobSoftDeleteDays": { "value": 7 },
+    "vaultSoftDeleteDays": { "value": 7 },
+    "wrappingKeyRotationDays": { "value": 90 },
+    "wrappingKeyExpiryDays": { "value": 365 },
+    "wrappingKeySize": { "value": 2048 },
+    "sqlAdminName": { "value": "towerner_microsoft.com#EXT#@fdpo.onmicrosoft.com" },
+    "sqlAdminObjectId": { "value": "861a33ce-bfc4-43b5-9ddf-04ad2df8af03" },
+    "sqlAdminPrincipalType": { "value": "User" },
+    "databaseName": { "value": "CphNonSubsidyTest" },
+    "sqlMaxVcores": { "value": 2 },
+    "sqlMinVcores": { "value": "0.5" },
+    "sqlMaxSizeGiB": { "value": 32 },
+    "sqlZoneRedundant": { "value": false },
+    "sqlBackupRedundancy": { "value": "Local" },
+    "sqlPointInTimeRetentionDays": { "value": 7 },
+    "sqlLongTermRetention": {
+      "value": {
+        "weeklyRetention": "P0W",
+        "monthlyRetention": "P0M",
+        "yearlyRetention": "P0Y",
+        "weekOfYear": 1
+      }
+    }
+  }
+}

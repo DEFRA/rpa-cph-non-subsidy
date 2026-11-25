@@ -52,8 +52,8 @@ environment values; do not mount obsolete settings there.
 | `ReverseProxy__KnownProxies__0` | Approved immediate proxy IP; use subsequent indices for additional IPs. |
 | `ReverseProxy__KnownIPNetworks__0` | Approved canonical proxy CIDR; use subsequent indices for additional networks. Never trust all networks. |
 | `HttpsRedirection__HttpsPort` | External HTTPS port; defaults to 443. |
-| `APPLICATIONINSIGHTS_CONNECTION_STRING` | Optional telemetry opt-in. Alternative: `ApplicationInsights__ConnectionString`; the former takes precedence. |
-| `Telemetry__ManagedIdentityClientId` | Optional explicit nonempty UAMI client GUID for telemetry ingestion; requires its connection string. Required for the ACA configuration below. |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | Optional Azure Monitor OpenTelemetry opt-in. Alternative: `ApplicationInsights__ConnectionString`, used only when the primary key is absent. A blank primary value disables telemetry, even if the alternative is configured. |
+| `Telemetry__ManagedIdentityClientId` | Optional explicit nonempty UAMI client GUID for telemetry ingestion; blank/invalid/all-zero values or an identity without a connection string fail startup. Uses only `ManagedIdentityCredential`, with no developer-credential fallback. Required when the target resource disables local authentication. |
 | `DataProtection__Enabled` | `true` enables shared keys; absent/`false` keeps local defaults. Enable for production ACA. |
 | `DataProtection__BlobUri` | HTTPS container/blob URI, without SAS, query, credentials or fragment. |
 | `DataProtection__KeyIdentifier` | HTTPS versionless Key Vault **key** URI: `/keys/<name>`, not a secret/certificate URL. |
@@ -247,8 +247,11 @@ and verify the following before production:
   ID, grant **Monitoring Metrics Publisher** on Application Insights and set
   `disableLocalAuth=true`. Without the identity setting, connection-string-only
   ingestion requires local authentication to be allowed. Verify ingestion/RBAC.
-  SDK defaults collect requests, dependencies, exceptions, traces and metrics,
-  subject to platform support, filters and sampling. There is no custom redaction;
+  Azure Monitor OpenTelemetry distro 1.6.0 uses service name
+  `RPA.CPH.NonSubsidy.Web` with default collection and sampling. Request traces
+  exclude `/health/live` and `/health/ready`; this is not a blanket metrics or
+  logging filter. Other requests, dependencies, exceptions, logs, metrics and
+  Live Metrics follow distro defaults and platform support. There is no custom redaction;
   review URLs/query strings, exceptions, logs, access and retention for sensitive
   data. Never log credentials, tokens or submitted forms, or enable identity PII.
 

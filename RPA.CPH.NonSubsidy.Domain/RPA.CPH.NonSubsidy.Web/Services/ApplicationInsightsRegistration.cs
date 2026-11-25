@@ -1,12 +1,14 @@
 using Azure.Identity;
-using Microsoft.ApplicationInsights.Extensibility;
+using Azure.Monitor.OpenTelemetry.AspNetCore;
+using OpenTelemetry.Instrumentation.AspNetCore;
+using OpenTelemetry.Resources;
 
 namespace RPA.CPH.NonSubsidy.Web.Services;
 
 public static class ApplicationInsightsRegistration
 {
     /// <summary>
-    /// Registers the standard Application Insights SDK when configured, optionally
+    /// Registers the Azure Monitor OpenTelemetry distro when configured, optionally
     /// authenticating ingestion with a user-assigned managed identity.
     /// </summary>
     public static IServiceCollection AddCphApplicationInsights(this IServiceCollection services, IConfiguration configuration)
@@ -32,20 +34,26 @@ public static class ApplicationInsightsRegistration
                 throw new InvalidOperationException("Telemetry:ManagedIdentityClientId requires an Application Insights connection string.");
         }
 
-        // No connection string means no SDK registration. An identity without a connection
+        // No connection string means no telemetry registration. An identity without a connection
         // string has already failed above so a deployment mistake cannot silently disable telemetry.
         if (string.IsNullOrWhiteSpace(connection)) return services;
 
-        // Keep SDK collection and sampling defaults; no application-specific redaction is applied.
-        services.AddApplicationInsightsTelemetry(options => options.ConnectionString = connection);
-        
-        // The connection string selects the telemetry resource; this identity authenticates ingestion.
-        // In ACA, attach this identity and grant it Monitoring Metrics Publisher on that resource.
-        // It is separate from Entra user sign-in, and has no developer-credential fallback.
-        // Without it, ingestion uses connection-string authentication (requires local auth enabled).
-        if (hasIdentity)
-            services.Configure<TelemetryConfiguration>(options => options.SetAzureTokenCredential(
-                new ManagedIdentityCredential(ManagedIdentityId.FromUserAssignedClientId(clientId.ToString()))));
+        var credential = hasIdentity
+            ? new ManagedIdentityCredential(ManagedIdentityId.FromUserAssignedClientId(clientId.ToString()))
+            : null;
+
+        services.Configure<AspNetCoreTraceInstrumentationOptions>(options =>
+            options.Filter = context => context.Request.Path != "/health/live" &&
+                                        context.Request.Path != "/health/ready");
+        // Keep distro collection and sampling defaults; no application-specific redaction is applied.
+        services.AddOpenTelemetry()
+            .UseAzureMonitor(options =>
+            {
+                options.ConnectionString = connection;
+                if (credential != null)
+                    options.Credential = credential;
+            })
+            .ConfigureResource(resource => resource.AddService("RPA.CPH.NonSubsidy.Web"));
         
         return services;
     }

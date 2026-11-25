@@ -1,0 +1,891 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.49.2.45890",
+      "templateHash": "9236834233150954277"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "minLength": 1
+    },
+    "prefix": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 6
+    },
+    "environmentName": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 3
+    },
+    "tags": {
+      "type": "object"
+    },
+    "integrationSubnetResourceId": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "Foundation output or approved existing subnet ID. The subnet must be delegated to Microsoft.Web/serverFarms and in the App Service region."
+      }
+    },
+    "databaseName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "imageRepository": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "Repository inside the foundation ACR, without a registry hostname or tag."
+      }
+    },
+    "productionImageDigest": {
+      "type": "string",
+      "minLength": 71,
+      "maxLength": 71,
+      "metadata": {
+        "description": "Immutable digest currently served in production: sha256:<64 lowercase hex>. On first deployment use the new image digest."
+      }
+    },
+    "stagingImageDigest": {
+      "type": "string",
+      "minLength": 71,
+      "maxLength": 71,
+      "metadata": {
+        "description": "Immutable digest to verify in the staging slot before swap. Equal to productionImageDigest when nothing is being rolled out."
+      }
+    },
+    "enableStagingSlot": {
+      "type": "bool",
+      "metadata": {
+        "description": "Staging slots require a Standard or Premium plan."
+      }
+    },
+    "stagingSlotName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20
+    },
+    "entraTenantId": {
+      "type": "string",
+      "minLength": 36,
+      "maxLength": 36
+    },
+    "entraClientId": {
+      "type": "string",
+      "minLength": 36,
+      "maxLength": 36
+    },
+    "entraClientSecretName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 127,
+      "metadata": {
+        "description": "Name of the owner-populated client secret in the foundation Key Vault; never its value."
+      }
+    },
+    "basicAccessRole": {
+      "type": "string",
+      "minLength": 1
+    },
+    "auditNameClaimType": {
+      "type": "string",
+      "minLength": 1
+    },
+    "trustedProxyCidr": {
+      "type": "string",
+      "metadata": {
+        "description": "Canonical CIDR of the proxy that forwards requests to the container. The app refuses wildcard trust. Confirm against real App Service traffic."
+      }
+    },
+    "routeAllOutboundThroughVnet": {
+      "type": "bool",
+      "metadata": {
+        "description": "Route all outbound traffic through the VNet. Required for Key Vault references that resolve over a private endpoint."
+      }
+    },
+    "additionalAllowedHosts": {
+      "type": "array",
+      "metadata": {
+        "description": "Custom domain hostnames allowed by the app, in addition to the default azurewebsites.net hostname."
+      }
+    },
+    "alertEmailAddresses": {
+      "type": "array",
+      "metadata": {
+        "description": "Alert recipients. Empty creates alert rules with no notification routing."
+      }
+    }
+  },
+  "variables": {
+    "stem": "[format('{0}-{1}', parameters('prefix'), parameters('environmentName'))]",
+    "globalStem": "[format('{0}{1}{2}', parameters('prefix'), parameters('environmentName'), uniqueString(resourceGroup().id, parameters('prefix'), parameters('environmentName')))]",
+    "siteName": "[format('{0}-{1}-web', variables('stem'), take(uniqueString(resourceGroup().id, parameters('prefix'), parameters('environmentName')), 6))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.KeyVault/vaults/keys', format('kv{0}', variables('globalStem')), 'data-protection')]",
+      "name": "[guid(resourceId('Microsoft.KeyVault/vaults/keys', format('kv{0}', variables('globalStem')), 'data-protection'), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('stem'))), 'key-wrap')]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('stem'))), '2024-11-30').principalId]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'e147488a-f6f5-4113-8e2d-b22465e65bf6')]"
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('{0}-webapp', variables('stem'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('siteName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          },
+          "planResourceId": {
+            "value": "[resourceId('Microsoft.Web/serverfarms', format('{0}-plan', variables('stem')))]"
+          },
+          "identityResourceId": {
+            "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('stem')))]"
+          },
+          "identityClientId": {
+            "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('stem'))), '2024-11-30').clientId]"
+          },
+          "integrationSubnetResourceId": {
+            "value": "[parameters('integrationSubnetResourceId')]"
+          },
+          "routeAllOutboundThroughVnet": {
+            "value": "[parameters('routeAllOutboundThroughVnet')]"
+          },
+          "registryLoginServer": {
+            "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', format('acr{0}', variables('globalStem'))), '2025-04-01').loginServer]"
+          },
+          "imageRepository": {
+            "value": "[parameters('imageRepository')]"
+          },
+          "productionImageDigest": {
+            "value": "[parameters('productionImageDigest')]"
+          },
+          "stagingImageDigest": {
+            "value": "[parameters('stagingImageDigest')]"
+          },
+          "enableStagingSlot": {
+            "value": "[parameters('enableStagingSlot')]"
+          },
+          "stagingSlotName": {
+            "value": "[parameters('stagingSlotName')]"
+          },
+          "additionalAllowedHosts": {
+            "value": "[parameters('additionalAllowedHosts')]"
+          },
+          "commonAppSettings": {
+            "value": [
+              {
+                "name": "WEBSITES_PORT",
+                "value": "8080"
+              },
+              {
+                "name": "WEBSITES_ENABLE_APP_SERVICE_STORAGE",
+                "value": "false"
+              },
+              {
+                "name": "ASPNETCORE_ENVIRONMENT",
+                "value": "Production"
+              },
+              {
+                "name": "ASPNETCORE_HTTP_PORTS",
+                "value": "8080"
+              },
+              {
+                "name": "AzureAd__Instance",
+                "value": "[environment().authentication.loginEndpoint]"
+              },
+              {
+                "name": "AzureAd__TenantId",
+                "value": "[parameters('entraTenantId')]"
+              },
+              {
+                "name": "AzureAd__ClientId",
+                "value": "[parameters('entraClientId')]"
+              },
+              {
+                "name": "AzureAd__ClientSecret",
+                "value": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/{1})', reference(resourceId('Microsoft.KeyVault/vaults', format('kv{0}', variables('globalStem'))), '2024-11-01').vaultUri, parameters('entraClientSecretName'))]"
+              },
+              {
+                "name": "Authorization__BasicAccessRole",
+                "value": "[parameters('basicAccessRole')]"
+              },
+              {
+                "name": "Identity__AuditNameClaimType",
+                "value": "[parameters('auditNameClaimType')]"
+              },
+              {
+                "name": "ConnectionStrings__CPHContext",
+                "value": "[format('Server=tcp:{0},1433;Database={1};Authentication=Active Directory Managed Identity;User Id={2};Encrypt=True;TrustServerCertificate=False;', reference(resourceId('Microsoft.Sql/servers', format('sql{0}', variables('globalStem'))), '2025-01-01').fullyQualifiedDomainName, parameters('databaseName'), reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('stem'))), '2024-11-30').clientId)]"
+              },
+              {
+                "name": "ReverseProxy__KnownIPNetworks__0",
+                "value": "[parameters('trustedProxyCidr')]"
+              },
+              {
+                "name": "HttpsRedirection__HttpsPort",
+                "value": "443"
+              },
+              {
+                "name": "DataProtection__Enabled",
+                "value": "true"
+              },
+              {
+                "name": "DataProtection__BlobUri",
+                "value": "[format('https://{0}.blob.{1}/data-protection/keys.xml', format('st{0}', variables('globalStem')), environment().suffixes.storage)]"
+              },
+              {
+                "name": "DataProtection__KeyIdentifier",
+                "value": "[format('{0}keys/data-protection', reference(resourceId('Microsoft.KeyVault/vaults', format('kv{0}', variables('globalStem'))), '2024-11-01').vaultUri)]"
+              },
+              {
+                "name": "DataProtection__ApplicationName",
+                "value": "[variables('stem')]"
+              },
+              {
+                "name": "DataProtection__ManagedIdentityClientId",
+                "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('stem'))), '2024-11-30').clientId]"
+              },
+              {
+                "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                "value": "[reference(resourceId('Microsoft.Insights/components', format('{0}-insights', variables('stem'))), '2020-02-02').ConnectionString]"
+              },
+              {
+                "name": "Telemetry__ManagedIdentityClientId",
+                "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('stem'))), '2024-11-30').clientId]"
+              }
+            ]
+          },
+          "logAnalyticsResourceId": {
+            "value": "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', variables('stem')))]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "languageVersion": "2.0",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.49.2.45890",
+              "templateHash": "1328589036046401252"
+            }
+          },
+          "functions": [
+            {
+              "namespace": "__bicep",
+              "members": {
+                "siteConfig": {
+                  "parameters": [
+                    {
+                      "type": "string",
+                      "name": "image"
+                    },
+                    {
+                      "type": "string",
+                      "name": "clientId"
+                    },
+                    {
+                      "type": "array",
+                      "name": "settings"
+                    }
+                  ],
+                  "output": {
+                    "type": "object",
+                    "value": {
+                      "linuxFxVersion": "[format('DOCKER|{0}', parameters('image'))]",
+                      "alwaysOn": true,
+                      "http20Enabled": true,
+                      "minTlsVersion": "1.2",
+                      "scmMinTlsVersion": "1.2",
+                      "ftpsState": "Disabled",
+                      "webSocketsEnabled": false,
+                      "healthCheckPath": "/health/ready",
+                      "acrUseManagedIdentityCreds": true,
+                      "acrUserManagedIdentityID": "[parameters('clientId')]",
+                      "appSettings": "[parameters('settings')]"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            },
+            "planResourceId": {
+              "type": "string"
+            },
+            "identityResourceId": {
+              "type": "string"
+            },
+            "identityClientId": {
+              "type": "string"
+            },
+            "integrationSubnetResourceId": {
+              "type": "string"
+            },
+            "routeAllOutboundThroughVnet": {
+              "type": "bool",
+              "metadata": {
+                "description": "Route all outbound traffic through the VNet (needed for Key Vault references over private endpoints)."
+              }
+            },
+            "registryLoginServer": {
+              "type": "string"
+            },
+            "imageRepository": {
+              "type": "string"
+            },
+            "productionImageDigest": {
+              "type": "string",
+              "minLength": 71,
+              "maxLength": 71,
+              "metadata": {
+                "description": "Immutable digest currently served by the production slot: sha256:<64 hex>."
+              }
+            },
+            "stagingImageDigest": {
+              "type": "string",
+              "minLength": 71,
+              "maxLength": 71,
+              "metadata": {
+                "description": "Digest deployed to the staging slot for verification before swap: sha256:<64 hex>."
+              }
+            },
+            "enableStagingSlot": {
+              "type": "bool"
+            },
+            "stagingSlotName": {
+              "type": "string"
+            },
+            "additionalAllowedHosts": {
+              "type": "array",
+              "metadata": {
+                "description": "Additional explicit hostnames (custom domains) allowed by the application. No wildcards, schemes, ports or paths."
+              }
+            },
+            "commonAppSettings": {
+              "type": "array",
+              "metadata": {
+                "description": "Settings shared by production and staging, supplied by the caller."
+              }
+            },
+            "logAnalyticsResourceId": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "productionHost": "[format('{0}.azurewebsites.net', parameters('name'))]",
+            "stagingHost": "[format('{0}-{1}.azurewebsites.net', parameters('name'), parameters('stagingSlotName'))]",
+            "productionHosts": "[join(concat(createArray(variables('productionHost')), parameters('additionalAllowedHosts')), ';')]",
+            "stagingHosts": "[variables('stagingHost')]",
+            "identityBinding": {
+              "type": "UserAssigned",
+              "userAssignedIdentities": {
+                "[format('{0}', parameters('identityResourceId'))]": {}
+              }
+            },
+            "productionImage": "[format('{0}/{1}@{2}', parameters('registryLoginServer'), parameters('imageRepository'), parameters('productionImageDigest'))]",
+            "stagingImage": "[format('{0}/{1}@{2}', parameters('registryLoginServer'), parameters('imageRepository'), parameters('stagingImageDigest'))]"
+          },
+          "resources": {
+            "site": {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2024-04-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "app,linux,container",
+              "identity": "[variables('identityBinding')]",
+              "properties": {
+                "serverFarmId": "[parameters('planResourceId')]",
+                "httpsOnly": true,
+                "clientAffinityEnabled": false,
+                "publicNetworkAccess": "Enabled",
+                "virtualNetworkSubnetId": "[parameters('integrationSubnetResourceId')]",
+                "vnetRouteAllEnabled": "[parameters('routeAllOutboundThroughVnet')]",
+                "keyVaultReferenceIdentity": "[parameters('identityResourceId')]",
+                "siteConfig": "[__bicep.siteConfig(variables('productionImage'), parameters('identityClientId'), concat(parameters('commonAppSettings'), createArray(createObject('name', 'AllowedHosts', 'value', variables('productionHosts')))))]"
+              }
+            },
+            "slot": {
+              "condition": "[parameters('enableStagingSlot')]",
+              "type": "Microsoft.Web/sites/slots",
+              "apiVersion": "2024-04-01",
+              "name": "[format('{0}/{1}', parameters('name'), parameters('stagingSlotName'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "app,linux,container",
+              "identity": "[variables('identityBinding')]",
+              "properties": {
+                "serverFarmId": "[parameters('planResourceId')]",
+                "httpsOnly": true,
+                "clientAffinityEnabled": false,
+                "publicNetworkAccess": "Enabled",
+                "virtualNetworkSubnetId": "[parameters('integrationSubnetResourceId')]",
+                "vnetRouteAllEnabled": "[parameters('routeAllOutboundThroughVnet')]",
+                "keyVaultReferenceIdentity": "[parameters('identityResourceId')]",
+                "siteConfig": "[__bicep.siteConfig(variables('stagingImage'), parameters('identityClientId'), concat(parameters('commonAppSettings'), createArray(createObject('name', 'AllowedHosts', 'value', variables('stagingHosts')))))]"
+              },
+              "dependsOn": [
+                "site"
+              ]
+            },
+            "slotSettings": {
+              "condition": "[parameters('enableStagingSlot')]",
+              "type": "Microsoft.Web/sites/config",
+              "apiVersion": "2024-04-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'slotConfigNames')]",
+              "properties": {
+                "appSettingNames": [
+                  "AllowedHosts"
+                ]
+              },
+              "dependsOn": [
+                "site"
+              ]
+            },
+            "scmPolicy": {
+              "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+              "apiVersion": "2024-04-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'scm')]",
+              "properties": {
+                "allow": false
+              },
+              "dependsOn": [
+                "site"
+              ]
+            },
+            "ftpPolicy": {
+              "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+              "apiVersion": "2024-04-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'ftp')]",
+              "properties": {
+                "allow": false
+              },
+              "dependsOn": [
+                "site"
+              ]
+            },
+            "logs": {
+              "type": "Microsoft.Web/sites/config",
+              "apiVersion": "2024-04-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'logs')]",
+              "properties": {
+                "applicationLogs": {
+                  "fileSystem": {
+                    "level": "Warning"
+                  }
+                },
+                "httpLogs": {
+                  "fileSystem": {
+                    "enabled": true,
+                    "retentionInDays": 3,
+                    "retentionInMb": 35
+                  }
+                },
+                "detailedErrorMessages": {
+                  "enabled": false
+                },
+                "failedRequestsTracing": {
+                  "enabled": false
+                }
+              },
+              "dependsOn": [
+                "site"
+              ]
+            },
+            "diagnostics": {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[resourceId('Microsoft.Web/sites', parameters('name'))]",
+              "name": "platform",
+              "properties": {
+                "workspaceId": "[parameters('logAnalyticsResourceId')]",
+                "logs": [
+                  {
+                    "category": "AppServiceHTTPLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServiceConsoleLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServiceAppLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServiceAuditLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServicePlatformLogs",
+                    "enabled": true
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "site"
+              ]
+            }
+          },
+          "outputs": {
+            "siteName": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "siteResourceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Web/sites', parameters('name'))]"
+            },
+            "productionHostName": {
+              "type": "string",
+              "value": "[variables('productionHost')]"
+            },
+            "stagingHostName": {
+              "type": "string",
+              "value": "[if(parameters('enableStagingSlot'), variables('stagingHost'), '')]"
+            },
+            "signInCallback": {
+              "type": "string",
+              "value": "[format('https://{0}/signin-oidc', variables('productionHost'))]"
+            },
+            "signOutCallback": {
+              "type": "string",
+              "value": "[format('https://{0}/signout-callback-oidc', variables('productionHost'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(resourceId('Microsoft.KeyVault/vaults/keys', format('kv{0}', variables('globalStem')), 'data-protection'), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.KeyVault/vaults/keys', format('kv{0}', variables('globalStem')), 'data-protection'), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('stem'))), 'key-wrap'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('{0}-alerts', variables('stem'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "stem": {
+            "value": "[variables('stem')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          },
+          "siteResourceId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-webapp', variables('stem'))), '2025-04-01').outputs.siteResourceId.value]"
+          },
+          "planResourceId": {
+            "value": "[resourceId('Microsoft.Web/serverfarms', format('{0}-plan', variables('stem')))]"
+          },
+          "alertEmailAddresses": {
+            "value": "[parameters('alertEmailAddresses')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.49.2.45890",
+              "templateHash": "12736354555141715828"
+            }
+          },
+          "parameters": {
+            "stem": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            },
+            "siteResourceId": {
+              "type": "string"
+            },
+            "planResourceId": {
+              "type": "string"
+            },
+            "alertEmailAddresses": {
+              "type": "array",
+              "metadata": {
+                "description": "Email recipients for alerts. An empty list creates the alert rules without notification routing; routing is the receiving team's decision."
+              }
+            }
+          },
+          "variables": {
+            "hasRecipients": "[not(empty(parameters('alertEmailAddresses')))]",
+            "actions": "[if(variables('hasRecipients'), createArray(createObject('actionGroupId', resourceId('Microsoft.Insights/actionGroups', format('{0}-alerts', parameters('stem'))))), createArray())]"
+          },
+          "resources": [
+            {
+              "condition": "[variables('hasRecipients')]",
+              "type": "Microsoft.Insights/actionGroups",
+              "apiVersion": "2023-01-01",
+              "name": "[format('{0}-alerts', parameters('stem'))]",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "copy": [
+                  {
+                    "name": "emailReceivers",
+                    "count": "[length(parameters('alertEmailAddresses'))]",
+                    "input": {
+                      "name": "[format('recipient-{0}', copyIndex('emailReceivers'))]",
+                      "emailAddress": "[parameters('alertEmailAddresses')[copyIndex('emailReceivers')]]",
+                      "useCommonAlertSchema": true
+                    }
+                  }
+                ],
+                "groupShortName": "[take(replace(parameters('stem'), '-', ''), 12)]",
+                "enabled": true
+              }
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "[format('{0}-http-5xx', parameters('stem'))]",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "Server errors (HTTP 5xx) above threshold.",
+                "severity": 2,
+                "enabled": true,
+                "scopes": [
+                  "[parameters('siteResourceId')]"
+                ],
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT15M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "Http5xx",
+                      "metricName": "Http5xx",
+                      "metricNamespace": "Microsoft.Web/sites",
+                      "operator": "GreaterThan",
+                      "threshold": 10,
+                      "timeAggregation": "Total",
+                      "criterionType": "StaticThresholdCriterion"
+                    }
+                  ]
+                },
+                "actions": "[variables('actions')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Insights/actionGroups', format('{0}-alerts', parameters('stem')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "[format('{0}-health-check', parameters('stem'))]",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "App Service health check (/health/ready) reports unhealthy instances.",
+                "severity": 1,
+                "enabled": true,
+                "scopes": [
+                  "[parameters('siteResourceId')]"
+                ],
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT15M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "HealthCheckStatus",
+                      "metricName": "HealthCheckStatus",
+                      "metricNamespace": "Microsoft.Web/sites",
+                      "operator": "LessThan",
+                      "threshold": 100,
+                      "timeAggregation": "Average",
+                      "criterionType": "StaticThresholdCriterion"
+                    }
+                  ]
+                },
+                "actions": "[variables('actions')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Insights/actionGroups', format('{0}-alerts', parameters('stem')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "[format('{0}-response-time', parameters('stem'))]",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "Average response time above 3 seconds.",
+                "severity": 3,
+                "enabled": true,
+                "scopes": [
+                  "[parameters('siteResourceId')]"
+                ],
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT15M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "HttpResponseTime",
+                      "metricName": "HttpResponseTime",
+                      "metricNamespace": "Microsoft.Web/sites",
+                      "operator": "GreaterThan",
+                      "threshold": 3,
+                      "timeAggregation": "Average",
+                      "criterionType": "StaticThresholdCriterion"
+                    }
+                  ]
+                },
+                "actions": "[variables('actions')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Insights/actionGroups', format('{0}-alerts', parameters('stem')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "[format('{0}-plan-cpu', parameters('stem'))]",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "App Service plan CPU above 85% for 15 minutes.",
+                "severity": 3,
+                "enabled": true,
+                "scopes": [
+                  "[parameters('planResourceId')]"
+                ],
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT15M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "CpuPercentage",
+                      "metricName": "CpuPercentage",
+                      "metricNamespace": "Microsoft.Web/serverfarms",
+                      "operator": "GreaterThan",
+                      "threshold": 85,
+                      "timeAggregation": "Average",
+                      "criterionType": "StaticThresholdCriterion"
+                    }
+                  ]
+                },
+                "actions": "[variables('actions')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Insights/actionGroups', format('{0}-alerts', parameters('stem')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "[format('{0}-plan-memory', parameters('stem'))]",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "App Service plan memory above 85% for 15 minutes.",
+                "severity": 3,
+                "enabled": true,
+                "scopes": [
+                  "[parameters('planResourceId')]"
+                ],
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT15M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "MemoryPercentage",
+                      "metricName": "MemoryPercentage",
+                      "metricNamespace": "Microsoft.Web/serverfarms",
+                      "operator": "GreaterThan",
+                      "threshold": 85,
+                      "timeAggregation": "Average",
+                      "criterionType": "StaticThresholdCriterion"
+                    }
+                  ]
+                },
+                "actions": "[variables('actions')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Insights/actionGroups', format('{0}-alerts', parameters('stem')))]"
+              ]
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('{0}-webapp', variables('stem')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "siteName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-webapp', variables('stem'))), '2025-04-01').outputs.siteName.value]"
+    },
+    "applicationOrigin": {
+      "type": "string",
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', format('{0}-webapp', variables('stem'))), '2025-04-01').outputs.productionHostName.value)]"
+    },
+    "stagingOrigin": {
+      "type": "string",
+      "value": "[if(parameters('enableStagingSlot'), format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', format('{0}-webapp', variables('stem'))), '2025-04-01').outputs.stagingHostName.value), '')]"
+    },
+    "signInCallback": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-webapp', variables('stem'))), '2025-04-01').outputs.signInCallback.value]"
+    },
+    "signOutCallback": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-webapp', variables('stem'))), '2025-04-01').outputs.signOutCallback.value]"
+    }
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": { "value": null },
+    "prefix": { "value": "cphns" },
+    "environmentName": { "value": "dev" },
+    "tags": { "value": { "application": "cph-non-subsidy", "environment": "dev", "hosting": "app-service" } },
+    "networking": {
+      "value": {
+        "mode": "Create",
+        "vnetCidr": null,
+        "dnsServers": null,
+        "integrationSubnet": { "mode": "Create", "cidr": null, "enableNatGateway": null },
+        "privateEndpointSubnet": { "mode": "Create", "cidr": null }
+      }
+    },
+    "privateDns": {
+      "value": {
+        "sql": {
+          "zone": { "mode": "Existing", "resourceId": null },
+          "link": { "mode": "Existing", "name": null },
+          "zoneGroupOwner": null
+        },
+        "vault": {
+          "zone": { "mode": "Existing", "resourceId": null },
+          "link": { "mode": "Existing", "name": null },
+          "zoneGroupOwner": null
+        },
+        "blob": {
+          "zone": { "mode": "Existing", "resourceId": null },
+          "link": { "mode": "Existing", "name": null },
+          "zoneGroupOwner": null
+        },
+        "monitor": {
+          "zone": { "mode": "Create" },
+          "link": { "mode": "Create", "name": "application-network" },
+          "zoneGroupOwner": "Project"
+        },
+        "oms": {
+          "zone": { "mode": "Create" },
+          "link": { "mode": "Create", "name": "application-network" },
+          "zoneGroupOwner": "Project"
+        },
+        "ods": {
+          "zone": { "mode": "Create" },
+          "link": { "mode": "Create", "name": "application-network" },
+          "zoneGroupOwner": "Project"
+        },
+        "agentsvc": {
+          "zone": { "mode": "Create" },
+          "link": { "mode": "Create", "name": "application-network" },
+          "zoneGroupOwner": "Project"
+        }
+      }
+    },
+    "monitoringAmpls": {
+      "value": {
+        "mode": "Create",
+        "associationOwner": "Project"
+      }
+    },
+    "monitoringPrivateEndpoint": {
+      "value": {
+        "mode": "Create"
+      }
+    },
+    "planSkuName": { "value": null },
+    "planInstanceCount": { "value": null },
+    "planZoneRedundant": { "value": null },
+    "enableAutoscale": { "value": null },
+    "autoscaleMaxInstances": { "value": null },
+    "acrSku": { "value": null },
+    "acrZoneRedundant": { "value": null },
+    "pipelinePrincipalObjectId": { "value": "" },
+    "logRetentionDays": { "value": null },
+    "applicationInsightsRetentionDays": { "value": null },
+    "keyRingStorageSku": { "value": null },
+    "blobSoftDeleteDays": { "value": null },
+    "vaultSoftDeleteDays": { "value": null },
+    "wrappingKeyRotationDays": { "value": null },
+    "wrappingKeyExpiryDays": { "value": null },
+    "wrappingKeySize": { "value": null },
+    "sqlAdminName": { "value": null },
+    "sqlAdminObjectId": { "value": null },
+    "sqlAdminPrincipalType": { "value": null },
+    "databaseName": { "value": null },
+    "sqlMaxVcores": { "value": null },
+    "sqlMinVcores": { "value": null },
+    "sqlMaxSizeGiB": { "value": null },
+    "sqlZoneRedundant": { "value": null },
+    "sqlBackupRedundancy": { "value": null },
+    "sqlPointInTimeRetentionDays": { "value": null },
+    "sqlLongTermRetention": {
+      "value": {
+        "weeklyRetention": null,
+        "monthlyRetention": null,
+        "yearlyRetention": null,
+        "weekOfYear": null
+      }
+    }
+  }
+}

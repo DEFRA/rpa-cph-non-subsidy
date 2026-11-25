@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": { "value": "eastus2" },
+    "prefix": { "value": "cphns" },
+    "environmentName": { "value": "dev" },
+    "tags": { "value": { "purpose": "parallel-aca-test", "validation-only": "true" } },
+    "foundation": {
+      "value": {
+        "vnetResourceId": null,
+        "privateEndpointSubnetResourceId": null,
+        "sqlServerResourceId": null,
+        "databaseName": null,
+        "storageAccountResourceId": null,
+        "dataProtectionContainerName": "data-protection",
+        "keyVaultResourceId": null,
+        "wrappingKeyName": "data-protection",
+        "logAnalyticsResourceId": null,
+        "applicationInsightsResourceId": null
+      }
+    },
+    "managedEnvironmentResourceId": { "value": null },
+    "managedIdentityResourceId": { "value": null },
+    "registryResourceId": { "value": null },
+    "acaSubnetResourceId": { "value": null },
+    "logAnalyticsResourceId": { "value": null },
+    "applicationInsightsResourceId": { "value": null },
+    "imageRepository": { "value": null },
+    "imageDigest": { "value": null },
+    "entraTenantId": { "value": null },
+    "entraClientId": { "value": null },
+    "entraClientSecretName": { "value": null },
+    "basicAccessRole": { "value": null },
+    "auditNameClaimType": { "value": null },
+    "containerSize": { "value": "0.25:0.5Gi" },
+    "minReplicas": { "value": 0 },
+    "maxReplicas": { "value": 2 },
+    "concurrentRequests": { "value": 50 },
+    "terminationGracePeriodSeconds": { "value": 30 }
+  }
+}

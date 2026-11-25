@@ -1,0 +1,56 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": { "value": null },
+    "prefix": { "value": null },
+    "environmentName": { "value": null },
+    "tags": { "value": null },
+    "vnetCidr": { "value": null },
+    "acaSubnetCidr": { "value": null },
+    "privateEndpointSubnetCidr": { "value": null },
+    "acaZoneRedundant": { "value": null },
+    "acrSku": { "value": "Premium" },
+    "acrZoneRedundant": { "value": null },
+    "logRetentionDays": { "value": null },
+    "applicationInsightsRetentionDays": { "value": null },
+    "keyRingStorageSku": { "value": null },
+    "blobSoftDeleteDays": { "value": null },
+    "vaultSoftDeleteDays": { "value": null },
+    "wrappingKeyRotationDays": { "value": null },
+    "wrappingKeyExpiryDays": { "value": null },
+    "wrappingKeySize": { "value": null },
+    "sqlAdminName": { "value": null },
+    "sqlAdminObjectId": { "value": null },
+    "sqlAdminPrincipalType": { "value": null },
+    "databaseName": { "value": null },
+    "sqlMaxVcores": { "value": null },
+    "sqlMinVcores": { "value": null },
+    "sqlMaxSizeGiB": { "value": null },
+    "sqlZoneRedundant": { "value": null },
+    "sqlBackupRedundancy": { "value": null },
+    "sqlPointInTimeRetentionDays": { "value": null },
+    "monitoringAmpls": { "value": { "mode": "Create", "associationOwner": "Project" } },
+    "monitoringPrivateEndpoint": { "value": { "mode": "Create" } },
+    "privateDns": {
+      "value": {
+        "sql": { "zone": { "mode": "Create" }, "link": { "mode": "Create", "name": "aca-network" }, "zoneGroupOwner": "Project" },
+        "vault": { "zone": { "mode": "Create" }, "link": { "mode": "Create", "name": "aca-network" }, "zoneGroupOwner": "Project" },
+        "blob": { "zone": { "mode": "Create" }, "link": { "mode": "Create", "name": "aca-network" }, "zoneGroupOwner": "Project" },
+        "registry": { "zone": { "mode": "Create" }, "link": { "mode": "Create", "name": "aca-network" }, "zoneGroupOwner": "Project" },
+        "monitor": { "zone": { "mode": "Create" }, "link": { "mode": "Create", "name": "aca-network" }, "zoneGroupOwner": "Project" },
+        "oms": { "zone": { "mode": "Create" }, "link": { "mode": "Create", "name": "aca-network" }, "zoneGroupOwner": "Project" },
+        "ods": { "zone": { "mode": "Create" }, "link": { "mode": "Create", "name": "aca-network" }, "zoneGroupOwner": "Project" },
+        "agentsvc": { "zone": { "mode": "Create" }, "link": { "mode": "Create", "name": "aca-network" }, "zoneGroupOwner": "Project" }
+      }
+    },
+    "sqlLongTermRetention": {
+      "value": {
+        "weeklyRetention": null,
+        "monthlyRetention": null,
+        "yearlyRetention": null,
+        "weekOfYear": null
+      }
+    }
+  }
+}
