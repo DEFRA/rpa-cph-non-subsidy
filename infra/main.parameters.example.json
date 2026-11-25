@@ -10,7 +10,7 @@
     "acaSubnetCidr": { "value": null },
     "privateEndpointSubnetCidr": { "value": null },
     "acaZoneRedundant": { "value": null },
-    "acrSku": { "value": null },
+    "acrSku": { "value": "Premium" },
     "acrZoneRedundant": { "value": null },
     "logRetentionDays": { "value": null },
     "applicationInsightsRetentionDays": { "value": null },
@@ -30,6 +30,20 @@
     "sqlZoneRedundant": { "value": null },
     "sqlBackupRedundancy": { "value": null },
     "sqlPointInTimeRetentionDays": { "value": null },
+    "monitoringAmpls": { "value": { "mode": "Create", "associationOwner": "Project" } },
+    "monitoringPrivateEndpoint": { "value": { "mode": "Create" } },
+    "privateDns": {
+      "value": {
+        "sql": { "zone": { "mode": "Create" }, "link": { "mode": "Create", "name": "aca-network" }, "zoneGroupOwner": "Project" },
+        "vault": { "zone": { "mode": "Create" }, "link": { "mode": "Create", "name": "aca-network" }, "zoneGroupOwner": "Project" },
+        "blob": { "zone": { "mode": "Create" }, "link": { "mode": "Create", "name": "aca-network" }, "zoneGroupOwner": "Project" },
+        "registry": { "zone": { "mode": "Create" }, "link": { "mode": "Create", "name": "aca-network" }, "zoneGroupOwner": "Project" },
+        "monitor": { "zone": { "mode": "Create" }, "link": { "mode": "Create", "name": "aca-network" }, "zoneGroupOwner": "Project" },
+        "oms": { "zone": { "mode": "Create" }, "link": { "mode": "Create", "name": "aca-network" }, "zoneGroupOwner": "Project" },
+        "ods": { "zone": { "mode": "Create" }, "link": { "mode": "Create", "name": "aca-network" }, "zoneGroupOwner": "Project" },
+        "agentsvc": { "zone": { "mode": "Create" }, "link": { "mode": "Create", "name": "aca-network" }, "zoneGroupOwner": "Project" }
+      }
+    },
     "sqlLongTermRetention": {
       "value": {
         "weeklyRetention": null,

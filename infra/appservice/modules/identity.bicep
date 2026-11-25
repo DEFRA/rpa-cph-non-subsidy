@@ -7,7 +7,7 @@ param tags object
 // One user-assigned identity is used for ACR pull, Key Vault references, SQL, Blob and
 // Key Vault key operations. It is a separate resource from the web app so it survives app replacement.
 module identity 'br/public:avm/res/managed-identity/user-assigned-identity:0.6.0' = {
-  name: '${stem}-identity'
+  name: '${stem}-identity-resource'
   params: {
     name: '${stem}-id'
     location: location

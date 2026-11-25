@@ -6,6 +6,7 @@
     "prefix": { "value": "cphns" },
     "environmentName": { "value": "dev" },
     "tags": { "value": { "application": "cph-non-subsidy", "environment": "dev", "hosting": "app-service" } },
+    "integrationSubnetResourceId": { "value": null },
     "databaseName": { "value": null },
     "imageRepository": { "value": "cph-nonsubsidy" },
     "productionImageDigest": { "value": null },

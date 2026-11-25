@@ -20,10 +20,11 @@ param acaSubnetCidr string
 param privateEndpointSubnetCidr string
 param acaZoneRedundant bool
 
-@allowed(['Basic', 'Standard', 'Premium'])
+@description('Premium is required for the parallel foundation ACR private endpoint.')
+@allowed(['Premium'])
 param acrSku string
 
-@description('Requires Premium when true; no registry replication is implied.')
+@description('Explicit registry zone choice; no geo-replication is implied.')
 param acrZoneRedundant bool
 
 @minValue(30)
@@ -101,8 +102,55 @@ param sqlLongTermRetention {
   weekOfYear: int
 }
 
-var stem = '${prefix}-${environmentName}'
-var globalStem = '${prefix}${environmentName}${uniqueString(resourceGroup().id, prefix, environmentName)}'
+import { PrivateDns } from 'modules/private-dns-zone.bicep'
+
+@sealed()
+param privateDns {
+  sql: PrivateDns
+  vault: PrivateDns
+  blob: PrivateDns
+  registry: PrivateDns
+  monitor: PrivateDns
+  oms: PrivateDns
+  ods: PrivateDns
+  agentsvc: PrivateDns
+}
+
+@sealed()
+type NewAmpls = {
+  mode: 'Create'
+  associationOwner: 'Project'
+}
+
+@sealed()
+type ExistingAmpls = {
+  mode: 'Existing'
+  resourceId: string
+  associationOwner: 'Project' | 'Platform'
+  workspaceAssociationName: string?
+  applicationInsightsAssociationName: string?
+}
+
+@discriminator('mode')
+param monitoringAmpls NewAmpls | ExistingAmpls
+
+@sealed()
+type NewMonitorEndpoint = {
+  mode: 'Create'
+}
+
+@sealed()
+type ExistingMonitorEndpoint = {
+  mode: 'Existing'
+  resourceId: string
+}
+
+@discriminator('mode')
+param monitoringPrivateEndpoint NewMonitorEndpoint | ExistingMonitorEndpoint
+
+// Separate names prevent the parallel stack from adopting the App Service foundation.
+var stem = '${prefix}-${environmentName}-aca'
+var globalStem = '${prefix}${environmentName}aca${take(uniqueString(resourceGroup().id, prefix, environmentName, 'aca'), 10)}'
 var keyRingContainerName = 'data-protection'
 var wrappingKeyName = 'data-protection'
 var applicationName = '${stem}-app'
@@ -124,13 +172,13 @@ resource acaNsg 'Microsoft.Network/networkSecurityGroups@2024-05-01' = {
   properties: {
     securityRules: [
       {
-        name: 'AllowPublicHttpsIngress'
+        name: 'AllowPrivateHttpsIngress'
         properties: {
           priority: 200
           access: 'Allow'
           direction: 'Inbound'
           protocol: 'Tcp'
-          sourceAddressPrefix: 'Internet'
+          sourceAddressPrefix: 'VirtualNetwork'
           sourcePortRange: '*'
           destinationAddressPrefix: acaSubnetCidr
           destinationPortRanges: ['443', '31443']
@@ -184,8 +232,8 @@ module logs 'br/public:avm/res/operational-insights/workspace:0.16.1' = {
     skuName: 'PerGB2018'
     dataRetention: logRetentionDays
     forceCmkForQuery: false
-    publicNetworkAccessForIngestion: 'Enabled'
-    publicNetworkAccessForQuery: 'Enabled'
+    publicNetworkAccessForIngestion: 'Disabled'
+    publicNetworkAccessForQuery: 'Disabled'
   }
 }
 
@@ -202,6 +250,8 @@ module insights 'br/public:avm/res/insights/component:0.8.0' = {
     disableIpMasking: false
     disableLocalAuth: true
     retentionInDays: applicationInsightsRetentionDays
+    publicNetworkAccessForIngestion: 'Disabled'
+    publicNetworkAccessForQuery: 'Disabled'
   }
 }
 
@@ -232,8 +282,8 @@ module registry 'br/public:avm/res/container-registry/registry:0.13.1' = {
     anonymousPullEnabled: false
     roleAssignmentMode: 'LegacyRegistryPermissions'
     azureADAuthenticationAsArmPolicyStatus: 'enabled'
-    publicNetworkAccess: 'Enabled'
-    networkRuleSetDefaultAction: 'Allow'
+    publicNetworkAccess: 'Disabled'
+    networkRuleSetDefaultAction: 'Deny'
     zoneRedundancy: acrZoneRedundant ? 'Enabled' : 'Disabled'
     retentionPolicyStatus: 'disabled'
     exportPolicyStatus: 'enabled'
@@ -395,23 +445,73 @@ var privateServices = [
     id: resourceId('Microsoft.Sql/servers', 'sql${globalStem}')
     groupId: 'sqlServer'
     zone: 'privatelink${az.environment().suffixes.sqlServerHostname}'
+    dns: privateDns.sql
   }
   {
     name: 'vault'
     id: resourceId('Microsoft.KeyVault/vaults', 'kv${globalStem}')
     groupId: 'vault'
     zone: 'privatelink.vaultcore.azure.net'
+    dns: privateDns.vault
   }
   {
     name: 'blob'
     id: resourceId('Microsoft.Storage/storageAccounts', 'st${globalStem}')
     groupId: 'blob'
     zone: 'privatelink.blob.${az.environment().suffixes.storage}'
+    dns: privateDns.blob
+  }
+  {
+    name: 'registry'
+    id: resourceId('Microsoft.ContainerRegistry/registries', 'acr${globalStem}')
+    groupId: 'registry'
+    zone: 'privatelink.azurecr.io'
+    dns: privateDns.registry
+  }
+]
+
+var monitorServices = [
+  { name: 'monitor', zone: 'privatelink.monitor.azure.com', dns: privateDns.monitor }
+  { name: 'oms', zone: 'privatelink.oms.opinsights.azure.com', dns: privateDns.oms }
+  { name: 'ods', zone: 'privatelink.ods.opinsights.azure.com', dns: privateDns.ods }
+  { name: 'agentsvc', zone: 'privatelink.agentsvc.azure-automation.net', dns: privateDns.agentsvc }
+]
+// Blob is declared once and is shared by the key ring and the Monitor zone group.
+var dnsServices = concat(privateServices, monitorServices)
+var dnsZoneIds = [
+  for service in dnsServices: service.dns.zone.mode == 'Create'
+    ? resourceId('Microsoft.Network/privateDnsZones', service.zone)
+    : service.dns.zone.resourceId
+]
+var monitorZoneIds = [
+  dnsZoneIds[4]
+  dnsZoneIds[5]
+  dnsZoneIds[6]
+  dnsZoneIds[7]
+  dnsZoneIds[2]
+]
+var monitorAmplsId = monitoringAmpls.mode == 'Create'
+  ? resourceId('Microsoft.Insights/privateLinkScopes', '${stem}-ampls')
+  : monitoringAmpls.resourceId
+
+module dnsConfiguration 'modules/private-dns-zone.bicep' = [
+  for service in dnsServices: {
+    name: '${stem}-${service.name}-dns'
+    scope: resourceGroup(
+      service.dns.zone.mode == 'Create' ? subscription().subscriptionId : split(service.dns.zone.resourceId, '/')[2],
+      service.dns.zone.mode == 'Create' ? resourceGroup().name : split(service.dns.zone.resourceId, '/')[4]
+    )
+    params: {
+      zoneName: service.zone
+      tags: tags
+      vnetResourceId: network.outputs.resourceId
+      configuration: service.dns
+    }
   }
 ]
 
 module privateConnections 'modules/private-endpoint.bicep' = [
-  for service in privateServices: {
+  for (service, index) in privateServices: {
     name: '${stem}-${service.name}-private'
     params: {
       name: '${stem}-${service.name}-pe'
@@ -419,11 +519,11 @@ module privateConnections 'modules/private-endpoint.bicep' = [
       tags: tags
       targetResourceId: service.id
       groupId: service.groupId
-      dnsZoneName: service.zone
-      vnetResourceId: network.outputs.resourceId
+      dnsZoneResourceId: dnsZoneIds[index]
+      manageDnsZoneGroup: service.dns.zoneGroupOwner == 'Project'
       subnetResourceId: '${network.outputs.resourceId}/subnets/private-endpoints'
     }
-    dependsOn: [sql, vault, storage]
+    dependsOn: [sql, vault, storage, registry, dnsConfiguration]
   }
 ]
 
@@ -435,8 +535,8 @@ module environment 'br/public:avm/res/app/managed-environment:0.16.0' = {
     tags: tags
     enableTelemetry: false
     infrastructureSubnetResourceId: '${network.outputs.resourceId}/subnets/aca'
-    internal: false
-    publicNetworkAccess: 'Enabled'
+    internal: true
+    publicNetworkAccess: 'Disabled'
     zoneRedundant: acaZoneRedundant
     workloadProfiles: [
       {
@@ -454,6 +554,48 @@ module environment 'br/public:avm/res/app/managed-environment:0.16.0' = {
       }
     ]
   }
+}
+
+module environmentDns 'modules/internal-environment-dns.bicep' = {
+  name: '${stem}-environment-dns'
+  params: {
+    dnsZoneName: environment.outputs.defaultDomain
+    ipv4Address: environment.outputs.staticIp!
+    vnetResourceId: network.outputs.resourceId
+    tags: tags
+  }
+}
+
+module monitorScope 'modules/monitor-private-link-scope.bicep' = if (monitoringAmpls.associationOwner == 'Project') {
+  name: '${stem}-monitor-scope'
+  scope: resourceGroup(split(monitorAmplsId, '/')[2], split(monitorAmplsId, '/')[4])
+  params: {
+    name: last(split(monitorAmplsId, '/'))
+    tags: tags
+    createScope: monitoringAmpls.mode == 'Create'
+    workspaceResourceId: logs.outputs.resourceId
+    applicationInsightsResourceId: insights.outputs.resourceId
+    workspaceAssociationName: monitoringAmpls.mode == 'Create'
+      ? 'workspace-${uniqueString(resourceGroup().id, stem)}'
+      : (monitoringAmpls.associationOwner == 'Project' ? monitoringAmpls.workspaceAssociationName! : '')
+    applicationInsightsAssociationName: monitoringAmpls.mode == 'Create'
+      ? 'insights-${uniqueString(resourceGroup().id, stem)}'
+      : (monitoringAmpls.associationOwner == 'Project' ? monitoringAmpls.applicationInsightsAssociationName! : '')
+  }
+}
+
+module monitorEndpoint 'modules/monitor-private-endpoint.bicep' = if (monitoringPrivateEndpoint.mode == 'Create') {
+  name: '${stem}-monitor-private'
+  params: {
+    name: '${stem}-monitor-pe'
+    location: location
+    tags: tags
+    amplsResourceId: monitorAmplsId
+    subnetResourceId: '${network.outputs.resourceId}/subnets/private-endpoints'
+    dnsZoneResourceIds: monitorZoneIds
+    manageDnsZoneGroup: privateDns.monitor.zoneGroupOwner == 'Project'
+  }
+  dependsOn: [monitorScope, dnsConfiguration]
 }
 
 output applicationHost string = '${applicationName}.${environment.outputs.defaultDomain}'
@@ -486,3 +628,12 @@ output sqlDatabaseName string = databaseName
 output applicationInsightsResourceId string = insights.outputs.resourceId
 output logAnalyticsResourceId string = logs.outputs.resourceId
 output acaSubnetCidr string = acaSubnetCidr
+output virtualNetworkResourceId string = network.outputs.resourceId
+output applicationPrivateDnsZoneResourceId string = environmentDns.outputs.resourceId
+output applicationInternalIpAddress string = environment.outputs.staticIp!
+output monitorPrivateLinkScopeResourceId string = monitorAmplsId
+output monitorPrivateEndpointResourceId string = monitoringPrivateEndpoint.mode == 'Create'
+  ? monitorEndpoint!.outputs.resourceId
+  : monitoringPrivateEndpoint.resourceId
+output privateDnsZoneResourceIds array = dnsZoneIds
+output monitorPrivateDnsZoneResourceIds array = monitorZoneIds

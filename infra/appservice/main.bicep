@@ -19,14 +19,54 @@ param environmentName string
 
 param tags object
 
-param vnetCidr string
+import { Networking } from 'modules/networking.bicep'
+import { PrivateDns } from 'modules/privateDnsZone.bicep'
 
-@description('Regional VNet integration subnet, delegated to Microsoft.Web/serverFarms. /26 recommended; /28 minimum.')
-param integrationSubnetCidr string
-param privateEndpointSubnetCidr string
+@description('Explicit network ownership. Create integration subnets /26 or larger; Existing accepts /28 subject to scale capacity. Existing resources are never rewritten.')
+param networking Networking
 
-@description('NAT gateway gives explicit, stable egress for outbound traffic routed through the VNet. Adds a public IP and NAT gateway cost.')
-param enableNatGateway bool
+@sealed()
+param privateDns {
+  sql: PrivateDns
+  vault: PrivateDns
+  blob: PrivateDns
+  monitor: PrivateDns
+  oms: PrivateDns
+  ods: PrivateDns
+  agentsvc: PrivateDns
+}
+
+@sealed()
+type NewAmpls = {
+  mode: 'Create'
+  associationOwner: 'Project'
+}
+
+@sealed()
+type ExistingAmpls = {
+  mode: 'Existing'
+  resourceId: string
+  associationOwner: 'Project' | 'Platform'
+  workspaceAssociationName: string?
+  applicationInsightsAssociationName: string?
+}
+
+@discriminator('mode')
+param monitoringAmpls NewAmpls | ExistingAmpls
+
+@sealed()
+type NewMonitorEndpoint = {
+  mode: 'Create'
+}
+
+@sealed()
+type ExistingMonitorEndpoint = {
+  mode: 'Existing'
+  resourceId: string
+}
+
+@discriminator('mode')
+param monitoringPrivateEndpoint NewMonitorEndpoint | ExistingMonitorEndpoint
 
 @allowed(['B1', 'B2', 'B3', 'S1', 'S2', 'S3', 'P0v3', 'P1v3', 'P2v3', 'P3v3', 'P1mv3', 'P2mv3', 'P3mv3'])
 param planSkuName string
@@ -137,6 +177,50 @@ var storageName = 'st${globalStem}'
 var sqlServerName = 'sql${globalStem}'
 var siteName = '${stem}-${take(uniqueString(resourceGroup().id, prefix, environmentName), 6)}-web'
 
+var monitorServices = [
+  { name: 'monitor', zone: 'privatelink.monitor.azure.com', dns: privateDns.monitor }
+  { name: 'oms', zone: 'privatelink.oms.opinsights.azure.com', dns: privateDns.oms }
+  { name: 'ods', zone: 'privatelink.ods.opinsights.azure.com', dns: privateDns.ods }
+  { name: 'agentsvc', zone: 'privatelink.agentsvc.azure-automation.net', dns: privateDns.agentsvc }
+]
+var dnsServices = concat([
+  {
+    name: 'sql'
+    zone: 'privatelink${az.environment().suffixes.sqlServerHostname}'
+    dns: privateDns.sql
+  }
+  {
+    name: 'vault'
+    zone: 'privatelink.vaultcore.azure.net'
+    dns: privateDns.vault
+  }
+  {
+    name: 'blob'
+    zone: 'privatelink.blob.${az.environment().suffixes.storage}'
+    dns: privateDns.blob
+  }
+], monitorServices)
+var monitorZoneIds = [
+  dnsServices[3].dns.zone.mode == 'Create'
+    ? resourceId('Microsoft.Network/privateDnsZones', dnsServices[3].zone)
+    : dnsServices[3].dns.zone.resourceId
+  dnsServices[4].dns.zone.mode == 'Create'
+    ? resourceId('Microsoft.Network/privateDnsZones', dnsServices[4].zone)
+    : dnsServices[4].dns.zone.resourceId
+  dnsServices[5].dns.zone.mode == 'Create'
+    ? resourceId('Microsoft.Network/privateDnsZones', dnsServices[5].zone)
+    : dnsServices[5].dns.zone.resourceId
+  dnsServices[6].dns.zone.mode == 'Create'
+    ? resourceId('Microsoft.Network/privateDnsZones', dnsServices[6].zone)
+    : dnsServices[6].dns.zone.resourceId
+  dnsServices[2].dns.zone.mode == 'Create'
+    ? resourceId('Microsoft.Network/privateDnsZones', dnsServices[2].zone)
+    : dnsServices[2].dns.zone.resourceId
+]
+var monitorAmplsId = monitoringAmpls.mode == 'Create'
+  ? resourceId('Microsoft.Insights/privateLinkScopes', '${stem}-ampls')
+  : monitoringAmpls.resourceId
+
 module identity 'modules/identity.bicep' = {
   name: '${stem}-identity'
   params: {
@@ -146,16 +230,38 @@ module identity 'modules/identity.bicep' = {
   }
 }
 
-module network 'modules/networking.bicep' = {
+var networkParts string[] = networking.mode == 'Existing' ? split(networking.vnetResourceId, '/') : []
+var networkSubscriptionId = networking.mode == 'Existing' ? networkParts[2] : subscription().subscriptionId
+var networkResourceGroupName = networking.mode == 'Existing' ? networkParts[4] : resourceGroup().name
+var createNetworking = networking.mode == 'Create' || networking.integrationSubnet.mode == 'Create' || networking.privateEndpointSubnet.mode == 'Create'
+
+resource selectedVnet 'Microsoft.Network/virtualNetworks@2024-05-01' existing = {
+  name: networking.mode == 'Existing' ? networkParts[8] : '${stem}-vnet'
+  scope: resourceGroup(networkSubscriptionId, networkResourceGroupName)
+}
+
+resource selectedIntegration 'Microsoft.Network/virtualNetworks/subnets@2024-05-01' existing = {
+  parent: selectedVnet
+  name: networking.integrationSubnet.mode == 'Existing'
+    ? last(split(networking.integrationSubnet.resourceId, '/'))
+    : 'integration'
+}
+
+resource selectedEndpointSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-05-01' existing = {
+  parent: selectedVnet
+  name: networking.privateEndpointSubnet.mode == 'Existing'
+    ? last(split(networking.privateEndpointSubnet.resourceId, '/'))
+    : 'private-endpoints'
+}
+
+module network 'modules/networking.bicep' = if (createNetworking) {
   name: '${stem}-network'
+  scope: resourceGroup(networkSubscriptionId, networkResourceGroupName)
   params: {
     stem: stem
     location: location
     tags: tags
-    vnetCidr: vnetCidr
-    integrationSubnetCidr: integrationSubnetCidr
-    privateEndpointSubnetCidr: privateEndpointSubnetCidr
-    enableNatGateway: enableNatGateway
+    configuration: networking
   }
 }
 
@@ -238,23 +344,60 @@ var privateServices = [
     id: resourceId('Microsoft.Sql/servers', sqlServerName)
     groupId: 'sqlServer'
     zone: 'privatelink${az.environment().suffixes.sqlServerHostname}'
+    dns: privateDns.sql
   }
   {
     name: 'vault'
     id: resourceId('Microsoft.KeyVault/vaults', vaultName)
     groupId: 'vault'
     zone: 'privatelink.vaultcore.azure.net'
+    dns: privateDns.vault
   }
   {
     name: 'blob'
     id: resourceId('Microsoft.Storage/storageAccounts', storageName)
     groupId: 'blob'
     zone: 'privatelink.blob.${az.environment().suffixes.storage}'
+    dns: privateDns.blob
+  }
+]
+
+resource selectedDnsZones 'Microsoft.Network/privateDnsZones@2024-06-01' existing = [
+  for service in dnsServices: {
+    name: service.dns.zone.mode == 'Existing' ? last(split(service.dns.zone.resourceId, '/')) : service.zone
+    scope: resourceGroup(
+      service.dns.zone.mode == 'Existing' ? split(service.dns.zone.resourceId, '/')[2] : subscription().subscriptionId,
+      service.dns.zone.mode == 'Existing' ? split(service.dns.zone.resourceId, '/')[4] : resourceGroup().name
+    )
+  }
+]
+
+resource selectedDnsLinks 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06-01' existing = [
+  for (service, index) in dnsServices: {
+    parent: selectedDnsZones[index]
+    name: service.dns.link.?name ?? 'application-network'
+  }
+]
+
+module dnsConfiguration 'modules/privateDnsZone.bicep' = [
+  for service in dnsServices: if (service.dns.zone.mode == 'Create' || service.dns.link.mode == 'Create') {
+    name: '${stem}-${service.name}-dns'
+    scope: resourceGroup(
+      service.dns.zone.mode == 'Existing' ? split(service.dns.zone.resourceId, '/')[2] : subscription().subscriptionId,
+      service.dns.zone.mode == 'Existing' ? split(service.dns.zone.resourceId, '/')[4] : resourceGroup().name
+    )
+    params: {
+      zoneName: service.zone
+      tags: tags
+      vnetResourceId: selectedVnet.id
+      configuration: service.dns
+    }
+    dependsOn: [network]
   }
 ]
 
 module privateConnections 'modules/privateEndpoint.bicep' = [
-  for service in privateServices: {
+  for (service, index) in privateServices: {
     name: '${stem}-${service.name}-private'
     params: {
       name: '${stem}-${service.name}-pe'
@@ -262,13 +405,45 @@ module privateConnections 'modules/privateEndpoint.bicep' = [
       tags: tags
       targetResourceId: service.id
       groupId: service.groupId
-      dnsZoneName: service.zone
-      vnetResourceId: network.outputs.vnetResourceId
-      subnetResourceId: network.outputs.privateEndpointSubnetResourceId
+      dnsZoneResourceId: selectedDnsZones[index].id
+      manageDnsZoneGroup: service.dns.zoneGroupOwner == 'Project'
+      subnetResourceId: selectedEndpointSubnet.id
     }
-    dependsOn: [database, vault, storage]
+    dependsOn: [database, vault, storage, network, dnsConfiguration]
   }
 ]
+
+module monitorScope 'modules/monitor-private-link-scope.bicep' = if (monitoringAmpls.associationOwner == 'Project') {
+  name: '${stem}-monitor-scope'
+  scope: resourceGroup(split(monitorAmplsId, '/')[2], split(monitorAmplsId, '/')[4])
+  params: {
+    name: last(split(monitorAmplsId, '/'))
+    tags: tags
+    createScope: monitoringAmpls.mode == 'Create'
+    workspaceResourceId: monitoring.outputs.logAnalyticsResourceId
+    applicationInsightsResourceId: monitoring.outputs.applicationInsightsResourceId
+    workspaceAssociationName: monitoringAmpls.mode == 'Create'
+      ? 'workspace-${uniqueString(resourceGroup().id, stem)}'
+      : (monitoringAmpls.associationOwner == 'Project' ? monitoringAmpls.workspaceAssociationName! : '')
+    applicationInsightsAssociationName: monitoringAmpls.mode == 'Create'
+      ? 'insights-${uniqueString(resourceGroup().id, stem)}'
+      : (monitoringAmpls.associationOwner == 'Project' ? monitoringAmpls.applicationInsightsAssociationName! : '')
+  }
+}
+
+module monitorEndpoint 'modules/monitor-private-endpoint.bicep' = if (monitoringPrivateEndpoint.mode == 'Create') {
+  name: '${stem}-monitor-private'
+  params: {
+    name: '${stem}-monitor-pe'
+    location: location
+    tags: tags
+    amplsResourceId: monitorAmplsId
+    subnetResourceId: selectedEndpointSubnet.id
+    dnsZoneResourceIds: monitorZoneIds
+    manageDnsZoneGroup: privateDns.monitor.zoneGroupOwner == 'Project'
+  }
+  dependsOn: [monitorScope, dnsConfiguration]
+}
 
 module plan 'modules/appServicePlan.bicep' = {
   name: '${stem}-plan'
@@ -288,8 +463,19 @@ module plan 'modules/appServicePlan.bicep' = {
 output siteName string = siteName
 output planName string = plan.outputs.name
 output planResourceId string = plan.outputs.resourceId
-output integrationSubnetResourceId string = network.outputs.integrationSubnetResourceId
-output natPublicIpAddress string = network.outputs.natPublicIpAddress
+output vnetResourceId string = selectedVnet.id
+output integrationSubnetResourceId string = selectedIntegration.id
+output privateEndpointSubnetResourceId string = selectedEndpointSubnet.id
+output privateDnsZoneResourceIds array = [for (service, index) in dnsServices: selectedDnsZones[index].id]
+output privateDnsLinkResourceIds array = [
+  for (service, index) in dnsServices: service.dns.link.mode == 'External' ? '' : selectedDnsLinks[index].id
+]
+output monitorPrivateDnsZoneResourceIds array = monitorZoneIds
+output monitorPrivateLinkScopeResourceId string = monitorAmplsId
+output monitorPrivateEndpointResourceId string = monitoringPrivateEndpoint.mode == 'Create'
+  ? monitorEndpoint!.outputs.resourceId
+  : monitoringPrivateEndpoint.resourceId
+output natPublicIpAddress string = createNetworking ? network!.outputs.natPublicIpAddress : ''
 output managedIdentityResourceId string = identity.outputs.resourceId
 output managedIdentityPrincipalId string = identity.outputs.principalId
 output managedIdentityClientId string = identity.outputs.clientId

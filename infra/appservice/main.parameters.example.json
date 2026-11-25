@@ -6,10 +6,65 @@
     "prefix": { "value": "cphns" },
     "environmentName": { "value": "dev" },
     "tags": { "value": { "application": "cph-non-subsidy", "environment": "dev", "hosting": "app-service" } },
-    "vnetCidr": { "value": null },
-    "integrationSubnetCidr": { "value": null },
-    "privateEndpointSubnetCidr": { "value": null },
-    "enableNatGateway": { "value": null },
+    "networking": {
+      "value": {
+        "mode": "Create",
+        "vnetCidr": null,
+        "dnsServers": null,
+        "integrationSubnet": { "mode": "Create", "cidr": null, "enableNatGateway": null },
+        "privateEndpointSubnet": { "mode": "Create", "cidr": null }
+      }
+    },
+    "privateDns": {
+      "value": {
+        "sql": {
+          "zone": { "mode": "Existing", "resourceId": null },
+          "link": { "mode": "Existing", "name": null },
+          "zoneGroupOwner": null
+        },
+        "vault": {
+          "zone": { "mode": "Existing", "resourceId": null },
+          "link": { "mode": "Existing", "name": null },
+          "zoneGroupOwner": null
+        },
+        "blob": {
+          "zone": { "mode": "Existing", "resourceId": null },
+          "link": { "mode": "Existing", "name": null },
+          "zoneGroupOwner": null
+        },
+        "monitor": {
+          "zone": { "mode": "Create" },
+          "link": { "mode": "Create", "name": "application-network" },
+          "zoneGroupOwner": "Project"
+        },
+        "oms": {
+          "zone": { "mode": "Create" },
+          "link": { "mode": "Create", "name": "application-network" },
+          "zoneGroupOwner": "Project"
+        },
+        "ods": {
+          "zone": { "mode": "Create" },
+          "link": { "mode": "Create", "name": "application-network" },
+          "zoneGroupOwner": "Project"
+        },
+        "agentsvc": {
+          "zone": { "mode": "Create" },
+          "link": { "mode": "Create", "name": "application-network" },
+          "zoneGroupOwner": "Project"
+        }
+      }
+    },
+    "monitoringAmpls": {
+      "value": {
+        "mode": "Create",
+        "associationOwner": "Project"
+      }
+    },
+    "monitoringPrivateEndpoint": {
+      "value": {
+        "mode": "Create"
+      }
+    },
     "planSkuName": { "value": null },
     "planInstanceCount": { "value": null },
     "planZoneRedundant": { "value": null },

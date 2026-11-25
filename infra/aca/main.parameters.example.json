@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": { "value": "eastus2" },
+    "prefix": { "value": "cphns" },
+    "environmentName": { "value": "dev" },
+    "tags": { "value": { "purpose": "parallel-aca-test", "validation-only": "true" } },
+    "foundation": {
+      "value": {
+        "vnetResourceId": null,
+        "privateEndpointSubnetResourceId": null,
+        "sqlServerResourceId": null,
+        "databaseName": null,
+        "storageAccountResourceId": null,
+        "dataProtectionContainerName": "data-protection",
+        "keyVaultResourceId": null,
+        "wrappingKeyName": "data-protection",
+        "logAnalyticsResourceId": null,
+        "applicationInsightsResourceId": null
+      }
+    },
+    "acaSubnet": { "value": { "mode": "Create", "name": "aca-parallel", "cidr": "10.240.4.0/23" } },
+    "acaZoneRedundant": { "value": false },
+    "registryName": { "value": null },
+    "registryDns": { "value": { "mode": "Create", "name": "privatelink.azurecr.io", "linkName": "aca-network" } },
+    "monitoringScope": { "value": { "mode": "Create" } },
+    "monitoringPrivateEndpoint": { "value": { "mode": "Create" } },
+    "monitoringDns": {
+      "value": [
+        { "mode": "Create", "name": "privatelink.monitor.azure.com", "linkName": "aca-network" },
+        { "mode": "Create", "name": "privatelink.oms.opinsights.azure.com", "linkName": "aca-network" },
+        { "mode": "Create", "name": "privatelink.ods.opinsights.azure.com", "linkName": "aca-network" },
+        { "mode": "Create", "name": "privatelink.agentsvc.azure-automation.net", "linkName": "aca-network" },
+        {
+          "mode": "Existing",
+          "name": "privatelink.blob.core.windows.net",
+          "resourceId": null,
+          "linkMode": "Existing",
+          "linkName": "application-network"
+        }
+      ]
+    },
+    "additionalMonitoringResourceIds": { "value": [] },
+    "existingScopeLinkedResourceIds": { "value": [] },
+    "sharedDnsChangeApprovalReference": { "value": null },
+    "logRetentionDays": { "value": 30 },
+    "applicationInsightsRetentionDays": { "value": 30 }
+  }
+}

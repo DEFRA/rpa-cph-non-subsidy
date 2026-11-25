@@ -16,6 +16,10 @@ param environmentName string
 
 param tags object
 
+@description('Foundation output or approved existing subnet ID. The subnet must be delegated to Microsoft.Web/serverFarms and in the App Service region.')
+@minLength(1)
+param integrationSubnetResourceId string
+
 @minLength(1)
 @maxLength(128)
 param databaseName string
@@ -162,7 +166,7 @@ module application 'modules/appService.bicep' = {
     planResourceId: plan.id
     identityResourceId: identity.id
     identityClientId: identity.properties.clientId
-    integrationSubnetResourceId: '${resourceId('Microsoft.Network/virtualNetworks', '${stem}-vnet')}/subnets/integration'
+    integrationSubnetResourceId: integrationSubnetResourceId
     routeAllOutboundThroughVnet: routeAllOutboundThroughVnet
     registryLoginServer: registry.properties.loginServer
     imageRepository: imageRepository

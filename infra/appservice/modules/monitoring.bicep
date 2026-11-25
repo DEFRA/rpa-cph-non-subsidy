@@ -24,8 +24,8 @@ module logs 'br/public:avm/res/operational-insights/workspace:0.16.1' = {
     skuName: 'PerGB2018'
     dataRetention: logRetentionDays
     forceCmkForQuery: false
-    publicNetworkAccessForIngestion: 'Enabled'
-    publicNetworkAccessForQuery: 'Enabled'
+    publicNetworkAccessForIngestion: 'Disabled'
+    publicNetworkAccessForQuery: 'Disabled'
   }
 }
 
@@ -42,6 +42,8 @@ module insights 'br/public:avm/res/insights/component:0.8.0' = {
     disableIpMasking: false
     disableLocalAuth: true
     retentionInDays: applicationInsightsRetentionDays
+    publicNetworkAccessForIngestion: 'Disabled'
+    publicNetworkAccessForQuery: 'Disabled'
   }
 }
 

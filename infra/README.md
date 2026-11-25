@@ -1,7 +1,8 @@
 # Bicep handoff
 
-> **Also available:** an Azure App Service (Linux container) hosting option lives in [appservice/](./appservice/README.md).
-> It is independent of the Container Apps templates below.
+> **Parallel private architecture:** the templates below create a separately named
+> internal Container Apps foundation. The existing [App Service foundation](./appservice/README.md)
+> is unchanged. Do not deploy these templates as an update to that foundation.
 
 This is a repository-only infrastructure handoff, not a deployment or production
 approval. The receiving team supplies approved parameter values and manually
@@ -33,6 +34,103 @@ Changing these identifiers can create a different stack; review what-if first.
 The templates target Azure public cloud; sovereign-cloud compatibility is not
 asserted.
 
+## Private access and isolation
+
+Names use `${prefix}-${environmentName}-aca` and a separate globally unique
+`aca` namespace (including bounded name lengths). A new VNet contains a dedicated
+`aca` subnet delegated to `Microsoft.App/environments` and a separate endpoint
+subnet. No existing VNet, App Service subnet, NSG, database, identity, registry,
+storage account, vault or workspace is adopted or redeployed.
+SQL/database settings and application Entra/data-protection settings are retained;
+the data-protection application discriminator remains `${prefix}-${environmentName}`.
+This does not migrate database data, wrapping keys or the existing Blob key ring.
+
+| Resource | Configuration |
+|---|---|
+| ACA environment | Internal, public network access Disabled, Consumption workload profile, Azure Monitor diagnostics. App ingress is external **to the app environment**, not public to the internet. |
+| ACA DNS | Environment-generated default-domain zone with apex/wildcard A records for its internal static IP and an `application-network` VNet link. |
+| ACR | Premium, public access Disabled, default network action Deny, admin/anonymous pull disabled, registry private endpoint and managed-identity AcrPull. |
+| SQL | Entra-only, public access Disabled, TLS 1.2, `sqlServer` endpoint. |
+| Key Vault | RBAC, purge protection, public access Disabled, bypass None, `vault` endpoint. |
+| Blob key ring | Public access Disabled, shared keys/public blobs disabled, HTTPS/TLS 1.2, `blob` endpoint. Other storage service endpoints are not used by this workload. |
+| Log Analytics / Application Insights | Public ingestion and query Disabled; Application Insights local auth disabled; both associated with AMPLS. |
+| AMPLS | PrivateOnly ingestion/query; one `azuremonitor` endpoint with five selected DNS zones. No Open/Transition profile or public fallback. |
+
+`privateDns` consolidates eight zones: SQL, Vault, Blob, ACR and four Monitor-only
+zones (`privatelink.monitor.azure.com`, `privatelink.oms.opinsights.azure.com`,
+`privatelink.ods.opinsights.azure.com`, `privatelink.agentsvc.azure-automation.net`).
+The fifth Monitor zone is the **same** `privatelink.blob.core.windows.net` used by
+the key ring: one zone/link declaration, two distinct endpoint zone groups.
+
+Zones support Create/Existing and links support Create/Existing/External.
+Existing zones and links are not redeployed; new links use explicit approved names
+in the zone's exact subscription/resource group. New endpoint zone groups require
+`zoneGroupOwner: Project`. This is permission to manage the new endpoint's DNS
+records, **not** read-only zone reuse. Platform-managed creation of endpoint DNS
+records is not implemented and is rejected, rather than silently omitting DNS.
+
+`monitoringAmpls` supports Create (Project associations) or Existing
+(Project/Platform associations). Existing scopes must already be PrivateOnly with
+no exclusions; their access modes/tags are never changed. Project association names
+must be unused and explicitly approved; existing associations are not overwritten.
+Platform associations must already target the exact new workspace/component IDs.
+`monitoringPrivateEndpoint` supports Create or verified Existing. Existing endpoints
+are not updated; owner-approved target, connection approval, five-zone group and
+reachability evidence are mandatory.
+
+Private networking does not provide client/operator VPN, peering, forwarding,
+private build runners, a firewall or an internet egress allow-list. Entra sign-in,
+ARM management and package/image-build dependencies are not made private by AMPLS.
+Keep service-required outbound access under approved platform controls. Do not claim
+that platform diagnostic delivery or every Azure control-plane call traverses the
+Monitor private endpoint. End-to-end DNS, telemetry ingestion/query, image pulls,
+client sign-in and bootstrap reachability require separate live acceptance testing.
+No such private ACA deployment or acceptance test has been performed here.
+
+## Owner-approved inventory preflight
+
+Real foundation parameters require `-NetworkInventory`. Capture actual metadata
+for the workload RG and every relevant connected-network/shared DNS/AMPLS scope.
+The inventory must be no more than 24 hours old and contain:
+
+- `subscriptionId`, `resourceGroupName`, `capturedAtUtc`: exact deployment scope
+  and UTC capture timestamp.
+- `resourceIds`: complete IDs in the workload/relevant scopes for creation-collision
+  checks. Planned parallel foundations/endpoints are never adopted on name matches.
+- `virtualNetworks`: ARM objects with `id` and
+  `properties.addressSpace.addressPrefixes`; include the existing App Service VNet
+  and every relevant connected network for address-overlap checks.
+- `privateDnsZones`: objects with `id` and complete `links`; links include `name`,
+  `properties.virtualNetwork.id`, `registrationEnabled` and `provisioningState`.
+  External resolution additionally needs owner-verified `externalResolutionVnetIds`.
+- `privateLinkScopes`: complete relevant AMPLS metadata with `id`,
+  `properties.accessModeSettings` and complete `scopedResources` (each association's
+  `name` and `properties.linkedResourceId`).
+- `privateEndpoints`: complete endpoint objects with `id`, ARM connection/subnet
+  properties and `dnsZoneGroups`. Existing Monitor reuse additionally needs approved
+  `reachableVnetIds` covering the exact new VNet and an Approved connection.
+- `approvedResourceIds`: explicit owner approval for selected Existing DNS zones,
+  Project record writes, AMPLS association writes and Existing Monitor endpoint reuse.
+  Presence in discovery results alone is not approval.
+- `isolatedDnsDomainApproved`: boolean owner confirmation of DNS isolation.
+- `monitoringDnsDomainAmplsResourceId`: actual scope for this DNS domain, or an
+  explicit empty string only after the owner confirms none exists. Create AMPLS
+  requires both an empty value and approved isolation. Existing AMPLS must match it.
+
+Never manufacture empty arrays from failed discovery or mark unknown ownership as
+approved. Subscription AMPLS existence does not establish applicability to the new
+DNS domain. The deployed test RG already has SQL/Vault/Blob zones, so the all-Create
+example cannot be used there unchanged: select approved Existing zones and new
+links for the parallel VNet, or obtain a separately approved isolated DNS design.
+Do not modify existing `application-network` links.
+
+The existing App Service inventory contract is different and insufficient here.
+No new real inventory or deployment parameter file is generated by this code.
+Inventory is owner-reviewed evidence, not proof of current permissions, capacity,
+policy or DNS reachability. Refresh immediately before an approved deployment.
+This preflight intentionally rejects foundation re-creation once its planned
+resources exist; recovery/redeployment needs a separate ownership-reviewed design.
+
 ## Local checks
 
 Use an installed [Bicep CLI](https://learn.microsoft.com/azure/azure-resource-manager/bicep/install).
@@ -43,7 +141,8 @@ ARM JSON is temporary, not a handoff source file.
 .\infra\Test-Templates.ps1 -BicepPath 'C:\tools\bicep.exe'
 .\infra\Test-Templates.ps1 -BicepPath 'C:\tools\bicep.exe' `
   -FoundationParameters 'C:\private\cph\foundation.parameters.json' `
-  -ApplicationParameters 'C:\private\cph\application.parameters.json'
+  -ApplicationParameters 'C:\private\cph\application.parameters.json' `
+  -NetworkInventory 'C:\private\cph\network-inventory.json'
 ```
 
 Run the parameter check before any Azure what-if or deployment. It rejects
@@ -61,14 +160,15 @@ Every input is required; none selects a region or production sizing for you.
 |---|---|
 | `location`, `tags` | Owner-approved region and tag object; no default region. |
 | `prefix`, `environmentName` | Lowercase alphanumeric, 2-6 and 2-3 characters. Names include deterministic resource-group-scoped uniqueness. |
-| `vnetCidr`, `acaSubnetCidr`, `privateEndpointSubnetCidr` | Approved, canonical RFC1918 IPv4 ranges; nonoverlapping subnets inside VNet. ACA subnet /27 or larger. Check overlap with all connected networks and ACA platform-reserved ranges externally. |
+| `vnetCidr`, `acaSubnetCidr`, `privateEndpointSubnetCidr` | Approved, canonical RFC1918 IPv4 ranges; nonoverlapping subnets inside a new VNet. ACA subnet /27 or larger; Monitor endpoint subnet /27 or larger, with at least 11 Monitor IPs plus service endpoint allocations. Verify scale/revision capacity and overlap with connected networks externally. |
 | `acaZoneRedundant` | Explicit zone choice, subject to Consumption/region support. No Dedicated fallback. |
-| `acrSku`, `acrZoneRedundant` | Basic/Standard/Premium; zone redundancy requires Premium. Standard registry RBAC, not repository ABAC. |
+| `acrSku`, `acrZoneRedundant` | Premium only for Private Link; explicit zone choice. Standard registry RBAC, not repository ABAC. |
+| `privateDns`, `monitoringAmpls`, `monitoringPrivateEndpoint` | Explicit ownership contracts described above; do not infer IDs, approvals or shared-resource absence. |
 | `logRetentionDays`, `applicationInsightsRetentionDays` | Explicit supported retention; eventual regulatory adequacy remains owner review. |
 | `keyRingStorageSku` | Explicit Standard LRS/ZRS/GRS/GZRS choice; geographic redundancy requires residency approval. |
 | `blobSoftDeleteDays`, `vaultSoftDeleteDays` | Blob/container soft-delete 1-365 days; vault soft-delete 7-90 days. Vault purge protection is enabled. |
 | `wrappingKeySize`, `wrappingKeyRotationDays`, `wrappingKeyExpiryDays` | RSA 2048/3072/4096; supplied rotation/expiry periods, rotation strictly before expiry. Foundation emits these as non-secret bootstrap inputs; it no longer creates the key. Apply them using the private-network bootstrap step. Validate policy bounds and ensure old versions remain available for key-ring decryption. |
-| `sqlAdminName`, `sqlAdminObjectId`, `sqlAdminPrincipalType` | Supplied deployment-tenant Entra administrator: explicit `Group` or `User`. For an individual use their user principal name and user Object ID in this tenant, not their app/client ID. Never use the runtime identity as administrator. Replaces the earlier `sqlAdminGroupName`/`sqlAdminGroupObjectId` input names. |
+| `sqlAdminName`, `sqlAdminObjectId`, `sqlAdminPrincipalType` | Supplied deployment-tenant Entra administrator: explicit `Group` or `User`. Use the verified administrator name and object ID in this tenant, not an app/client ID. Never use the runtime identity as administrator. Replaces the earlier `sqlAdminGroupName`/`sqlAdminGroupObjectId` input names. |
 | `databaseName` | Explicit database name, restricted by the local check to letters/digits/underscore/hyphen. |
 | `sqlMinVcores`, `sqlMaxVcores`, `sqlMaxSizeGiB` | Explicit GP serverless Gen5 min/max/storage; fractional minimum is a string. Auto-pause is disabled (`-1`); minimum compute remains billed when idle. Confirm actual regional SKU limits. |
 | `sqlZoneRedundant`, `sqlBackupRedundancy` | Explicit zone and Local/Zone/Geo/GeoZone backup choices. They do not establish an RPO/RTO or create a secondary server. |
@@ -132,6 +232,9 @@ the application an SQL/Key Vault administrator.
 
 ```powershell
 az account set --subscription '<approved-subscription-id>'
+.\infra\Test-Templates.ps1 -BicepPath 'C:\tools\bicep.exe' `
+  -FoundationParameters 'C:\private\cph\foundation.parameters.json' `
+  -NetworkInventory 'C:\private\cph\network-inventory.json'
 az deployment group what-if --resource-group '<approved-resource-group>' `
   --template-file '.\infra\main.bicep' `
   --parameters '@C:\private\cph\foundation.parameters.json'
@@ -160,12 +263,14 @@ history, environment dumps or credentials into Git.
    endpoints from the workload and operator execution paths. Public access to
    those services is disabled; do not temporarily open them to fix bootstrap.
    The NSGs retain default VNet/load-balancer rules and standard outbound,
-   with public ACA HTTPS ingress allowed on platform ports 443/31443;
+   with private VNet ACA HTTPS ingress allowed on platform ports 443/31443;
    they are **not** an internet egress allow-list or inspected firewall.
 2. Push the receiving team's built image into ACR with a **separate** authorized
    build/push principal. Runtime gets registry-scoped `AcrPull` only. Obtain the
    repository's immutable `sha256:` digest; a local Docker image ID is not a
-   registry digest. Admin credentials and anonymous pulls are disabled.
+   registry digest. Premium ACR is private: the build/push host needs approved
+   private routing and DNS, including registry data endpoints. Admin credentials
+   and anonymous pulls are disabled.
 3. The identity team supplies the production Entra registration, app role,
    assigned users/groups and approved audit claim. Register the foundation's
    exact sign-in/sign-out callback URLs. Never reuse local test IDs implicitly.
@@ -196,9 +301,9 @@ that identity; do not describe the identity as permanently retained.
 
 #### Private-network key bootstrap and recovery from ForbiddenByConnection
 
-Keep the vault's `publicNetworkAccess: Disabled` and `bypass: None`. Rerun the
-updated foundation with the **same subscription, resource group and names** in
-incremental mode (the default) to complete missing resources and retrieve outputs.
+Keep the vault's `publicNetworkAccess: Disabled` and `bypass: None`. Retrieve
+outputs from the existing parallel deployment. Do not bypass the creation-collision
+preflight by rerunning the foundation; recovery needs a separately reviewed plan.
 Do not delete the vault or resource group; soft delete/purge protection also make
 destructive retries inappropriate. Do not use complete deployment mode to
 remove the former key resource.

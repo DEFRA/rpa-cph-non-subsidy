@@ -82,8 +82,8 @@ param concurrentRequests int
 @maxValue(600)
 param terminationGracePeriodSeconds int
 
-var stem = '${prefix}-${environmentName}'
-var globalStem = '${prefix}${environmentName}${uniqueString(resourceGroup().id, prefix, environmentName)}'
+var stem = '${prefix}-${environmentName}-aca'
+var globalStem = '${prefix}${environmentName}aca${take(uniqueString(resourceGroup().id, prefix, environmentName, 'aca'), 10)}'
 var hostName = '${stem}-app.${managedEnvironment.properties.defaultDomain}'
 var size = split(containerSize, ':')
 
@@ -200,7 +200,7 @@ module application 'br/public:avm/res/app/container-app:0.23.0' = {
             value: 'https://${storage.name}.blob.${az.environment().suffixes.storage}/data-protection/keys.xml'
           }
           { name: 'DataProtection__KeyIdentifier', value: '${vault.properties.vaultUri}keys/data-protection' }
-          { name: 'DataProtection__ApplicationName', value: stem }
+          { name: 'DataProtection__ApplicationName', value: '${prefix}-${environmentName}' }
           { name: 'DataProtection__ManagedIdentityClientId', value: identity.properties.clientId }
           { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: insights.properties.ConnectionString }
           { name: 'Telemetry__ManagedIdentityClientId', value: identity.properties.clientId }
