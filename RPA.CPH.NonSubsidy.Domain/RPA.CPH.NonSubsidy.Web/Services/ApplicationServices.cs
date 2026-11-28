@@ -166,7 +166,7 @@ public static class ApplicationServices
 
     private static void AddDatabase(IServiceCollection services, string connectionString)
     {
-        services.AddDbContext<CPHContext>(options => options.UseSqlServer(connectionString));
+        services.AddDbContext<CPHContext>(options => options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure()));
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddHealthChecks().AddCheck<SqlReadinessHealthCheck>("sql", tags: ["ready"]);
     }

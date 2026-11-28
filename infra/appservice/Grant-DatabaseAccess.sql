@@ -11,6 +11,7 @@ GO
 
 -- Business data: read and maintain customers, addresses, land, parcels and cases.
 GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::[CPH] TO [<runtime-identity-name>];
--- Audit trail: append and read only; never modify or delete history.
-GRANT SELECT, INSERT ON SCHEMA::[Audit] TO [<runtime-identity-name>];
+-- Audit trail: the app updates the shared-key Audit row (last user/time) on every customer save, so UPDATE is
+-- required alongside SELECT and INSERT. DELETE is deliberately not granted.
+GRANT SELECT, INSERT, UPDATE ON SCHEMA::[Audit] TO [<runtime-identity-name>];
 GO
